@@ -1,0 +1,25 @@
+{
+	"name": "gears/pdf",
+	"description": "A PDF builder using DOCX templates.",
+	"homepage": "https://github.com/phpgearbox/pdf",
+	"keywords": ["pdf", "docx", "template", "builder", "converter"],
+	"license": "MIT",
+	"autoload":
+	{
+		"psr-4":
+		{
+			"Gears\\": "src"
+		}
+	},
+	"require":
+	{
+		"gears/di": "*",
+		"symfony/filesystem": "2.*"
+	},
+	"require-dev":
+	{
+		"codegyre/robo": "*",
+		"phpunit/phpunit": "4.*",
+		"guzzlehttp/guzzle": "4.*"
+	}
+}
