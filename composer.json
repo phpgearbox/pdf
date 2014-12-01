@@ -13,7 +13,9 @@
 	},
 	"require":
 	{
+		"gears/string": "*",
 		"gears/di": "*",
+		"symfony/process": "2.*",
 		"symfony/filesystem": "2.*"
 	},
 	"require-dev":

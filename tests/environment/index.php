@@ -14,3 +14,4 @@
 // Load the composer autoloader
 require('../../vendor/autoload.php');
 
+echo Gears\Pdf::convert('/var/www/vhosts/phpwordtest/corporate-deed-template.docx');

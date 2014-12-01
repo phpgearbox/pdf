@@ -59,6 +59,7 @@ class RoboFile extends Robo\Tasks
 
 	public function example()
 	{
-		new Gears\Pdf('sfdgsfdg');
+		echo Gears\Pdf::convert('/var/www/vhosts/phpwordtest/corporate-deed-template.docx');
+		//new Gears\Pdf('/var/www/vhosts/phpwordtest/corporate-deed-template.docx');
 	}
 }

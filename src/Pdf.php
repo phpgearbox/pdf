@@ -14,7 +14,9 @@
 use ZipArchive;
 use SplFileInfo;
 use RuntimeException;
+use Gears\String as Str;
 use Gears\Di\Container;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Filesystem\Filesystem;
 
 class Pdf extends Container
@@ -207,7 +209,7 @@ class Pdf extends Container
 	 */
 	public function save($path = null)
 	{
-		if (!$this->tempDocument)
+		if ($this->tempDocument !== false)
 		{
 			$doc = $this->tempDocument;
 			$this->writeTempDocument();
@@ -220,15 +222,50 @@ class Pdf extends Container
 		}
 
 		// Build the unoconv cmd
-		$cmd = $this->unoconvBin.' -f pdf';
+		$cmd = 'export HOME=/tmp && '.$this->unoconvBin.' -v -f pdf';
 		if (!is_null($path)) $cmd .= ' -o '.$path;
-		$cmd .= $doc->getPathname();
-
-		// This may help with sudo type issues:
-		// http://stackoverflow.com/questions/8532304/execute-root-commands-via-php
+		$cmd .= ' '.$doc->getPathname();
 
 		// Run the command
-		system($cmd);
+		$process = new Process($cmd);
+		$process->run();
+
+		// Check for errors
+		$error = null;
+		if (!$process->isSuccessful())
+		{
+			$error = $process->getErrorOutput();
+
+			// NOTE: For some really odd reason the first time the command runs
+			// it does not complete successfully. The second time around it
+			// works fine. It has something to do with the homedir setup...
+			if (Str::contains($error, 'Error: Unable to connect'))
+			{
+				$process->run();
+
+				if (!$process->isSuccessful())
+				{
+					$error = $process->getErrorOutput();
+				}
+				else
+				{
+					$error = null;
+				}
+			}
+
+			if (!is_null($error))
+			{
+				throw new \RuntimeException($error);
+			}
+		}
+
+		// Parse the outputted filepath
+		return Str::between
+		(
+			$process->getOutput().'<END>',
+			'Output file: ',
+			'<END>'
+		);
 	}
 
 	/**
