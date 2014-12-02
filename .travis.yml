@@ -7,6 +7,7 @@ php:
 
 before_install:
   - "sudo apt-get update -qq"
+  - "sudo apt-get install -y libreoffice-writer"
   - "sudo apt-get install -y unoconv"
 
 install: "composer install"
