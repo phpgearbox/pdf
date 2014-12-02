@@ -20,13 +20,6 @@ require_once(__DIR__.'/vendor/autoload.php');
 class RoboFile extends Robo\Tasks
 {
 	/**
-	 * Property: serverPort
-	 * =========================================================================
-	 * The port the built in PHP server will run on for our acceptance testing.
-	 */
-	public static $serverPort = 8000;
-
-	/**
 	 * Method: test
 	 * =========================================================================
 	 * This will run our unit / acceptance testing. All the *gears* within
@@ -46,20 +39,7 @@ class RoboFile extends Robo\Tasks
 	 */
 	public function test()
 	{
-		$this->taskServer(self::$serverPort)
-			->dir('./tests/environment')
-			->background(true)
-		->run();
-
-		$this->taskPHPUnit()
-			->bootstrap('./tests/bootstrap.php')
-			->arg('./tests')
-		->run();
-	}
-
-	public function example()
-	{
-		echo Gears\Pdf::convert('/var/www/vhosts/phpwordtest/corporate-deed-template.docx');
-		//new Gears\Pdf('/var/www/vhosts/phpwordtest/corporate-deed-template.docx');
+		$this->taskCleanDir('./tests/output')->run();
+		$this->taskPHPUnit()->arg('./tests')->run();
 	}
 }
