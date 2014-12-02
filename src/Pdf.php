@@ -676,7 +676,7 @@ class Pdf extends Container
 	 */
 	protected function createTempDocument()
 	{
-		if (($temp = tempnam(sys_get_temp_dir(), 'GearsPdf')) === false)
+		if (($temp = tempnam(sys_get_temp_dir(), 'GearsPdf').'.docx') === false)
 		{
 			throw new RuntimeException
 			(
