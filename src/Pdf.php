@@ -266,6 +266,8 @@ class Pdf extends Container
 		if (!is_null($path)) $cmd .= ' -o '.$path;
 		$cmd .= ' '.$doc->getPathname();
 
+		var_dump($cmd);
+		
 		// Run the command
 		$process = $this->process($cmd);
 		$process->run();

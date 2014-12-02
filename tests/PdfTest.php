@@ -26,10 +26,16 @@ class PdfTest extends PHPUnit_Framework_TestCase
 
 	public function testConvert()
 	{
-		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/Convert.pdf'); 
+		echo "\n\n";
+
+		var_dump(Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/Convert.pdf')); 
+
+		echo "\n\n";
 
 		system('ls -la ./tests/output');
 
+		echo "\n\n";
+		
 		system('ls -la ./tests/output/Convert.pdf');
 
 		/*$this->assertEquals
