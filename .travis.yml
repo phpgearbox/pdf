@@ -10,7 +10,8 @@ before_install:
   - "sudo apt-get install -y libreoffice-writer"
   - "sudo apt-get install -y unoconv"
   - "sudo apt-get remove --purge unoconv"
-  - "sudo git clone https://github.com/dagwieers/unoconv && cd ~/unoconv && sudo make install"
+  - "git clone https://github.com/dagwieers/unoconv /tmp/unoconv"
+  - "cd /tmp/unoconv && sudo make install"
 
 install: "composer install"
 
