@@ -301,12 +301,6 @@ class Pdf extends Container
 			if (!is_null($error)) throw new RuntimeException($error);
 		}
 
-		// Delete the temp document if it exists.
-		if ($this->tempDocument !== false)
-		{
-			$this->deleteTempDocument();
-		}
-
 		// Parse the outputted filepath
 		$output_file = $this->fileInfo(Str::between
 		(
@@ -315,8 +309,8 @@ class Pdf extends Container
 			"\n"
 		));
 
-		var_dump($output_file->getPathname());
-		
+		var_dump($output_file->getRealPath());
+
 		// Sometimes on some installations of unoconv it doesn't save the file
 		// at the expected location, it instead saves the final file inside a
 		// folder with the same name as the file. The following corrects this.
@@ -330,6 +324,12 @@ class Pdf extends Container
 
 			// Now copy the file back to it's correct location
 			$this->fileSystem->copy($this->tempDocument, $path, true);
+		}
+
+		// Delete the temp document if it exists.
+		if ($this->tempDocument !== false)
+		{
+			$this->deleteTempDocument();
 		}
 
 		// Return the location of the saved pdf
