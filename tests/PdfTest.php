@@ -30,14 +30,10 @@ class PdfTest extends PHPUnit_Framework_TestCase
 
 		$text = $this->pdfBox->textFromPdfFile('./tests/output/Convert.pdf');
 
-		$text = Str::toUTF8($text);
-		
-		var_dump($text);
-
-		$this->assertTrue(Str::contains($text, Str::toUTF8('Demonstration of DOCX support')));
+		$this->assertTrue(Str::contains($text, 'Demonstration of DOCX support'));
 	}
 
-	/*public function testSetValue()
+	public function testSetValue()
 	{
 		$document = new Gears\Pdf('./tests/templates/SetValue.docx');
 		$document->setValue('name', 'Brad Jones');
@@ -147,5 +143,5 @@ class PdfTest extends PHPUnit_Framework_TestCase
 		$this->assertTrue(Str::contains($html, '<p>1 Name Taylor First name James Phone +1 428 889 773 </p>'));
 		$this->assertTrue(Str::contains($html, '<p>2 Name Bell First name Robert Phone +1 428 889 774 </p>'));
 		$this->assertTrue(Str::contains($html, '<p>3 Name Ray First name Michael Phone +1 428 889 775 </p>'));
-	}*/
+	}
 }
