@@ -263,11 +263,11 @@ class Pdf extends Container
 
 		// Build the unoconv cmd
 		$cmd = 'export HOME=/tmp && '.$this->unoconvBin.' -v -f pdf';
-		if (!is_null($path)) $cmd .= ' -o '.$path;
+		if (!is_null($path)) $cmd .= ' --output="'.$path.'"';
 		$cmd .= ' '.$doc->getPathname();
 
 		var_dump($cmd);
-		
+
 		// Run the command
 		$process = $this->process($cmd);
 		$process->run();
