@@ -30,8 +30,8 @@ class PdfTest extends PHPUnit_Framework_TestCase
 
 		$this->assertEquals
 		(
-			file_get_contents('./tests/expected/Convert.html'),
-			$this->pdfBox->htmlFromPdfFile('./tests/output/Convert.pdf')
+			file_get_contents('./tests/expected/Convert.txt'),
+			$this->pdfBox->textFromPdfFile('./tests/output/Convert.pdf')
 		);
 	}
 
