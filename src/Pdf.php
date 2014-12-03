@@ -301,12 +301,13 @@ class Pdf extends Container
 			if (!is_null($error)) throw new RuntimeException($error);
 		}
 
-		// Parse the outputted filepath
+		// Delete the temp document if it exists.
+		if ($this->tempDocument !== false) $this->deleteTempDocument();
+
+		// Parse the outputted file path
 		$output_file = $this->fileInfo(Str::between
 		(
-			$process->getOutput(),
-			'Output file: ',
-			"\n"
+			$process->getOutput(), 'Output file: ', "\n"
 		));
 
 		var_dump($output_file->getRealPath());
@@ -316,20 +317,11 @@ class Pdf extends Container
 		// folder with the same name as the file. The following corrects this.
 		if ($output_file->getPathname() != $path->getPathname())
 		{
-			// Lets override the temp document, we don't need it anymore anyway.
-			$this->fileSystem->copy($output_file, $this->tempDocument, true);
-
-			// Now remove the stupid extra folder
+			$temp = $this->fileInfo(tempnam(sys_get_temp_dir(), 'GearsPdf')));
+			$this->fileSystem->copy($output_file, $temp, true);
 			$this->fileSystem->remove($output_file->getPath());
-
-			// Now copy the file back to it's correct location
-			$this->fileSystem->copy($this->tempDocument, $path, true);
-		}
-
-		// Delete the temp document if it exists.
-		if ($this->tempDocument !== false)
-		{
-			$this->deleteTempDocument();
+			$this->fileSystem->copy($temp, $path, true);
+			$this->fileSystem->remove($temp);
 		}
 
 		// Return the location of the saved pdf
