@@ -28,11 +28,13 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	{
 		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/Convert.pdf');
 
-		$this->assertEquals
-		(
-			file_get_contents('./tests/expected/Convert.txt'),
-			$this->pdfBox->textFromPdfFile('./tests/output/Convert.pdf')
-		);
+		$text1 = file_get_contents('./tests/expected/Convert.txt');
+		$text2 = $this->pdfBox->textFromPdfFile('./tests/output/Convert.pdf');
+
+		$text1 = str_replace(["\n", ' '], '', $text1);
+		$text2 = str_replace(["\n", ' '], '', $text2);
+
+		$this->assertEquals($text1, $text2);
 	}
 
 	/*public function testSetValue()
