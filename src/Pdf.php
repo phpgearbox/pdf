@@ -317,7 +317,7 @@ class Pdf extends Container
 		// folder with the same name as the file. The following corrects this.
 		if ($output_file->getPathname() != $path->getPathname())
 		{
-			$temp = $this->fileInfo(tempnam(sys_get_temp_dir(), 'GearsPdf')));
+			$temp = $this->fileInfo(tempnam(sys_get_temp_dir(), 'GearsPdf'));
 			$this->fileSystem->copy($output_file, $temp, true);
 			$this->fileSystem->remove($output_file->getPath());
 			$this->fileSystem->copy($temp, $path, true);
