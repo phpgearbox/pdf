@@ -268,8 +268,6 @@ class Pdf extends Container
 		if (!is_null($path)) $cmd .= ' --output="'.$path->getPathname().'"';
 		$cmd .= ' "'.$doc->getPathname().'"';
 
-		var_dump($cmd);
-
 		// Run the command
 		$process = $this->process($cmd);
 		$process->run();
@@ -309,8 +307,6 @@ class Pdf extends Container
 		(
 			$process->getOutput(), 'Output file: ', "\n"
 		));
-
-		var_dump($output_file->getRealPath());
 
 		// Sometimes on some installations of unoconv it doesn't save the file
 		// at the expected location, it instead saves the final file inside a
