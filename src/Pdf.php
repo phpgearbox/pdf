@@ -234,7 +234,7 @@ class Pdf extends Container
 	 * 
 	 * Returns:
 	 * -------------------------------------------------------------------------
-	 * void
+	 * ```SplFileInfo```
 	 * 
 	 * Throws:
 	 * -------------------------------------------------------------------------
@@ -250,21 +250,23 @@ class Pdf extends Container
 		}
 		else
 		{
-			// Make sure we save the searched and reaplced version of the doc.
+			// Make sure we save the searched and replaced version of the doc.
 			$doc = $this->tempDocument;
 			$this->writeTempDocument();
 
 			if (is_null($path))
 			{
-				$path = Str::s($this->template->getPathname())
-					->replace('.docx', '.pdf');
+				$path = Str::s($this->template->getPathname());
+				$path = $path->replace('.docx', '.pdf');
 			}
 		}
 
+		$path = $this->fileInfo($path);
+
 		// Build the unoconv cmd
 		$cmd = 'export HOME=/tmp && '.$this->unoconvBin.' -v -f pdf';
-		if (!is_null($path)) $cmd .= ' --output="'.$path.'"';
-		$cmd .= ' '.$doc->getPathname();
+		if (!is_null($path)) $cmd .= ' --output="'.$path->getPathname().'"';
+		$cmd .= ' "'.$doc->getPathname().'"';
 
 		var_dump($cmd);
 
@@ -306,12 +308,32 @@ class Pdf extends Container
 		}
 
 		// Parse the outputted filepath
-		return Str::between
+		$output_file = $this->fileInfo(Str::between
 		(
-			$process->getOutput().'<END>',
+			$process->getOutput(),
 			'Output file: ',
-			'<END>'
-		);
+			"\n"
+		));
+
+		var_dump($output_file->getPathname());
+		
+		// Sometimes on some installations of unoconv it doesn't save the file
+		// at the expected location, it instead saves the final file inside a
+		// folder with the same name as the file. The following corrects this.
+		if ($output_file->getPathname() != $path->getPathname())
+		{
+			// Lets override the temp document, we don't need it anymore anyway.
+			$this->fileSystem->copy($output_file, $this->tempDocument, true);
+
+			// Now remove the stupid extra folder
+			$this->fileSystem->remove($output_file->getPath());
+
+			// Now copy the file back to it's correct location
+			$this->fileSystem->copy($this->tempDocument, $path, true);
+		}
+
+		// Return the location of the saved pdf
+		return $path;
 	}
 
 	/**
@@ -687,7 +709,7 @@ class Pdf extends Container
 			);
 		}
 
-		$this->tempDocument = new SplFileInfo($temp);
+		$this->tempDocument = $this->fileInfo($temp);
 
 		$this->fileSystem->copy($this->template, $this->tempDocument, true);
 	}
