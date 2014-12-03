@@ -30,6 +30,8 @@ class PdfTest extends PHPUnit_Framework_TestCase
 
 		$text = $this->pdfBox->textFromPdfFile('./tests/output/Convert.pdf');
 
+		var_dump($text);
+
 		$this->assertTrue(Str::contains($text, 'Demonstration of DOCX support'));
 	}
 
