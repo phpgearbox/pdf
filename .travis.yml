@@ -5,15 +5,14 @@ php:
   - "5.5"
   - "5.4"
 
-before_install:
+install:
   - "sudo apt-get update -qq"
   - "sudo apt-get install -y libreoffice-writer"
   - "sudo apt-get install -y unoconv"
   - "sudo apt-get remove --purge unoconv"
   - "git clone https://github.com/dagwieers/unoconv /tmp/unoconv"
   - "cd /tmp/unoconv && sudo make install"
-
-install: "composer install"
+  - "cd TRAVIS_BUILD_DIR && composer install"
 
 script: "./vendor/bin/robo test"
 
