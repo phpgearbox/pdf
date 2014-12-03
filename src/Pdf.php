@@ -733,28 +733,37 @@ class Pdf extends Container
 		$index = 1;
 		while ($this->zip->locateName($this->getHeaderName($index)) !== false)
 		{
-			$this->headerXMLs[$index] = $this->xml($this->zip->getFromName
+			$this->headerXMLs[$index] = $this->fixSplitTags
 			(
-				$this->getHeaderName($index)
-			));
+				$this->xml($this->zip->getFromName
+				(
+					$this->getHeaderName($index)
+				))
+			);
 
 			$index++;
 		}
 
 		// Read in the main body
-		$this->documentXML = $this->xml
+		$this->documentXML = $this->fixSplitTags
 		(
-			$this->zip->getFromName('word/document.xml')
+			$this->xml
+			(
+				$this->zip->getFromName('word/document.xml')
+			)
 		);
 
 		// Read in the footers
 		$index = 1;
 		while ($this->zip->locateName($this->getFooterName($index)) !== false)
 		{
-			$this->footerXMLs[$index] = $this->xml($this->zip->getFromName
+			$this->footerXMLs[$index] = $this->fixSplitTags
 			(
-				$this->getFooterName($index)
-			));
+				$this->xml($this->zip->getFromName
+				(
+					$this->getFooterName($index)
+				))
+			);
 			
 			$index++;
 		}
@@ -890,49 +899,12 @@ class Pdf extends Container
 		// Make sure the replacement value is encoded correctly.
 		$replace = htmlspecialchars(Str::toUTF8($replace));
 
-		/*
-		 * Clean up the xml
-		 * If part of the tag is formatted differently we won't get a match.
-		 * Best explained with an example:
-		 * 
-		 * ```xml
-		 * <w:r>
-		 * 	<w:rPr/>
-		 * 	<w:t>Hello ${tag_</w:t>
-		 * </w:r>
-		 * <w:r>
-		 * 	<w:rPr>
-		 * 		<w:b/>
-		 * 		<w:bCs/>
-		 * 	</w:rPr>
-		 * 	<w:t>1}</w:t>
-		 * </w:r>
-		 * ```
-		 * 
-		 * Ther above becomes:
-		 * 
-		 * ```xml
-		 * <w:r>
-		 * 	<w:rPr/>
-		 * 	<w:t>Hello ${tag_1}</w:t>
-		 * </w:r>
-		 * ```
-		 */
-		$xml = $xml->asXml();
-		preg_match_all('|\$\{([^\}]+)\}|U', $xml, $matches);
-		foreach ($matches[0] as $value)
-		{
-			$valueCleaned = preg_replace('/<[^>]+>/', '', $value);
-			$valueCleaned = preg_replace('/<\/[^>]+>/', '', $valueCleaned);
-			$xml = str_replace($value, $valueCleaned, $xml);
-		}
-
 		// Do the search and replace
 		return $this->xml(preg_replace
 		(
 			'/'.preg_quote($search, '/').'/u',
 			$replace,
-			$xml,
+			$xml->asXml(),
 			$limit
 		));
 	}
@@ -1101,5 +1073,50 @@ class Pdf extends Container
 		preg_match($this->getBlockRegx($nodes), $xml->asXml(), $matches);
 
 		return $matches;
+	}
+
+	/**
+	 * Method: fixSplitTags
+	 * =========================================================================
+	 * If part of the tag is formatted differently we won't get a match.
+	 * Best explained with an example:
+	 * 
+	 * ```xml
+	 * <w:r>
+	 * 	<w:rPr/>
+	 * 	<w:t>Hello ${tag_</w:t>
+	 * </w:r>
+	 * <w:r>
+	 * 	<w:rPr>
+	 * 		<w:b/>
+	 * 		<w:bCs/>
+	 * 	</w:rPr>
+	 * 	<w:t>1}</w:t>
+	 * </w:r>
+	 * ```
+	 * 
+	 * The above becomes, after running through this method:
+	 * 
+	 * ```xml
+	 * <w:r>
+	 * 	<w:rPr/>
+	 * 	<w:t>Hello ${tag_1}</w:t>
+	 * </w:r>
+	 * ```
+	 */
+	protected function fixSplitTags($xml)
+	{
+		$xml = $xml->asXml();
+
+		preg_match_all('|\$\{([^\}]+)\}|U', $xml, $matches);
+
+		foreach ($matches[0] as $value)
+		{
+			$valueCleaned = preg_replace('/<[^>]+>/', '', $value);
+			$valueCleaned = preg_replace('/<\/[^>]+>/', '', $valueCleaned);
+			$xml = str_replace($value, $valueCleaned, $xml);
+		}
+
+		return $this->xml($xml);
 	}
 }
