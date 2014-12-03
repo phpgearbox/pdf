@@ -313,7 +313,7 @@ class Pdf extends Container
 		// folder with the same name as the file. The following corrects this.
 		if ($output_file->getPathname() != $path->getPathname())
 		{
-			$temp = $this->fileInfo(tempnam(sys_get_temp_dir(), 'GearsPdf'));
+			$temp = $this->createTempFilename();
 			$this->fileSystem->copy($output_file, $temp, true);
 			$this->fileSystem->remove($output_file->getPath());
 			$this->fileSystem->copy($temp, $path, true);
@@ -331,17 +331,23 @@ class Pdf extends Container
 	 * to the browser as a down-loadable file. This method will generate the
 	 * PDF and send the appropriate headers for you.
 	 * 
+	 * TODO: Ideally I would like to avoid the use of yet another temp file.
+	 *       Can we pipe the output from unoconv directly back into PHP?
+	 * 
 	 * Parameters:
 	 * -------------------------------------------------------------------------
-	 * n/a
+	 *  - $filename: This is the name of the file that the browser will see.
 	 * 
 	 * Returns:
 	 * -------------------------------------------------------------------------
 	 * void
 	 */
-	public function download()
+	public function download($filename = 'download.pdf')
 	{
-		// TODO
+		// Send some headers
+		header('Content-Type: application/pdf');
+		header('Content-Disposition: attachment; filename="'.$filename.'"');
+		echo $this->getPdfRaw();
 	}
 
 	/**
@@ -350,6 +356,9 @@ class Pdf extends Container
 	 * Unlike the download method this will stream the PDF to the browser.
 	 * ie: It will open inside the browsers PDF reader.
 	 * 
+	 * TODO: Ideally I would like to avoid the use of yet another temp file.
+	 *       Can we pipe the output from unoconv directly back into PHP?
+	 * 
 	 * Parameters:
 	 * -------------------------------------------------------------------------
 	 * n/a
@@ -358,9 +367,12 @@ class Pdf extends Container
 	 * -------------------------------------------------------------------------
 	 * void
 	 */
-	public function stream()
+	public function stream($filename = 'download.pdf')
 	{
-		// TODO
+		// Send some headers
+		header('Content-Type: application/pdf');
+		header('Content-Disposition: inline; filename="'.$filename.'"');
+		echo $this->getPdfRaw();
 	}
 
 	/**
@@ -668,6 +680,30 @@ class Pdf extends Container
 	}
 
 	/**
+	 * Method: getPdfRaw
+	 * =========================================================================
+	 * This is used by [Method: download](#) and [Method: stream](#).
+	 * 
+	 * TODO: Ideally I would like to avoid the use of yet another temp file.
+	 *       Can we pipe the output from unoconv directly back into PHP?
+	 * 
+	 * Parameters:
+	 * -------------------------------------------------------------------------
+	 * n/a
+	 * 
+	 * Returns:
+	 * -------------------------------------------------------------------------
+	 * binary pdf data 
+	 */
+	protected function getPdfRaw()
+	{
+		$temp = $this->createTempFilename();
+		$pdf = file_get_contents($this->save($temp));
+		$this->fileSystem->remove($temp);
+		return $pdf;
+	}
+
+	/**
 	 * Method: createTempDocument
 	 * =========================================================================
 	 * We don't want to make any changes to the actual template document.
@@ -681,12 +717,33 @@ class Pdf extends Container
 	 * Returns:
 	 * -------------------------------------------------------------------------
 	 * void
+	 */
+	protected function createTempDocument()
+	{
+		$this->tempDocument = $this->createTempFilename();
+
+		$this->fileSystem->copy($this->template, $this->tempDocument, true);
+	}
+
+	/**
+	 * Method: createTempFilename
+	 * =========================================================================
+	 * Please don't confuse this with [Method: createTempDocument](#).
+	 * This method is used several times, each time we need a new temp file.
+	 * 
+	 * Parameters:
+	 * -------------------------------------------------------------------------
+	 * n/a
+	 * 
+	 * Returns:
+	 * -------------------------------------------------------------------------
+	 * A new instance of ```SplFileInfo```.
 	 * 
 	 * Throws:
 	 * -------------------------------------------------------------------------
 	 *  - RuntimeException: If a path to the temp file could not be created.
 	 */
-	protected function createTempDocument()
+	protected function createTempFilename()
 	{
 		if (($temp = tempnam(sys_get_temp_dir(), 'GearsPdf')) === false)
 		{
@@ -697,9 +754,7 @@ class Pdf extends Container
 			);
 		}
 
-		$this->tempDocument = $this->fileInfo($temp);
-
-		$this->fileSystem->copy($this->template, $this->tempDocument, true);
+		return $this->fileInfo($temp);
 	}
 
 	/**
