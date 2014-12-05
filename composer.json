@@ -16,7 +16,8 @@
 		"gears/string": "*",
 		"gears/di": "*",
 		"symfony/process": "2.*",
-		"symfony/filesystem": "2.*"
+		"symfony/filesystem": "2.*",
+		"google/apiclient": "1.*"
 	},
 	"require-dev":
 	{

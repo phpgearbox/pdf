@@ -14,21 +14,34 @@
 use Gears\String as Str;
 use SGH\PdfBox\PdfBox;
 
-class PdfTest extends PHPUnit_Framework_TestCase
+class PdfGoogleTest extends PHPUnit_Framework_TestCase
 {
 	protected $pdfBox;
+
+	protected $converter;
 
 	protected function setUp()
 	{
 		$this->pdfBox = new PdfBox;
 		$this->pdfBox->setPathToPdfBox('./tests/pdfbox-app-1.8.7.jar');
+
+		$this->converter = function()
+		{
+			return new Gears\Pdf\Converter\Google
+			([
+				'serviceAccountEmail' => '1016040153537-bd5v9bk5t7g39663vbnjhf5qldjueoid@developer.gserviceaccount.com',
+				'serviceAccountKeyFile' => '/home/bj/Downloads/My Project-31504ed7d736.p12'
+			]);
+		};
 	}
 
 	public function testConvert()
 	{
-		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/Convert.pdf');
+		Gears\Pdf::$staticConverter = $this->converter;
 
-		$text = $this->pdfBox->textFromPdfFile('./tests/output/Convert.pdf');
+		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/GoogleConvert.pdf');
+
+		$text = $this->pdfBox->textFromPdfFile('./tests/output/GoogleConvert.pdf');
 
 		$this->assertTrue(Str::contains($text, 'Demonstration of DOCX support'));
 	}
@@ -36,10 +49,11 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	public function testSetValue()
 	{
 		$document = new Gears\Pdf('./tests/templates/SetValue.docx');
+		$document->converter = $this->converter;
 		$document->setValue('name', 'Brad Jones');
-		$document->save('./tests/output/SetValue.pdf');
+		$document->save('./tests/output/GoogleSetValue.pdf');
 
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/SetValue.pdf'))->to('ascii');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/GoogleSetValue.pdf'))->to('ascii');
 
 		$this->assertTrue($text->contains('Hello Brad Jones.'));
 	}
@@ -47,10 +61,11 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	public function testCloneBlock()
 	{
 		$document = new Gears\Pdf('./tests/templates/CloneBlock.docx');
+		$document->converter = $this->converter;
 		$document->cloneBlock('CLONEME', 3);
-		$document->save('./tests/output/CloneBlock.pdf');
+		$document->save('./tests/output/GoogleCloneBlock.pdf');
 
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/CloneBlock.pdf'))->to('ascii');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/GoogleCloneBlock.pdf'))->to('ascii');
 
 		$this->assertFalse($text->contains('${CLONEME}'));
 		$this->assertEquals(3, substr_count($text, 'PHPWord can apply font'));
@@ -60,10 +75,11 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	public function testReplaceBlock()
 	{
 		$document = new Gears\Pdf('./tests/templates/ReplaceBlock.docx');
+		$document->converter = $this->converter;
 		$document->replaceBlock('REPLACEME', '<w:p><w:pPr><w:pStyle w:val="PreformattedText"/><w:rPr/></w:pPr><w:r><w:rPr/><w:t>I am replaced.</w:t></w:r></w:p>');
-		$document->save('./tests/output/ReplaceBlock.pdf');
+		$document->save('./tests/output/GoogleReplaceBlock.pdf');
 
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/ReplaceBlock.pdf'))->to('ascii');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/GoogleReplaceBlock.pdf'))->to('ascii');
 
 		$this->assertFalse($text->contains('${REPLACEME}'));
 		$this->assertTrue($text->contains('I am replaced.'));
@@ -73,10 +89,11 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	public function testDeleteBlock()
 	{
 		$document = new Gears\Pdf('./tests/templates/DeleteBlock.docx');
+		$document->converter = $this->converter;
 		$document->deleteBlock('DELETEME');
-		$document->save('./tests/output/DeleteBlock.pdf');
+		$document->save('./tests/output/GoogleDeleteBlock.pdf');
 
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/DeleteBlock.pdf'))->to('ascii');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/GoogleDeleteBlock.pdf'))->to('ascii');
 
 		$this->assertFalse($text->contains('${DELETEME}'));
 		$this->assertFalse($text->contains('This should be deleted.'));
@@ -86,6 +103,7 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	public function testCloneRow()
 	{
 		$document = new Gears\Pdf('./tests/templates/CloneRow.docx');
+		$document->converter = $this->converter;
 
 		$document->cloneRow('rowValue', 10);
 		$document->setValue('rowValue_1', 'Sun');
@@ -123,9 +141,9 @@ class PdfTest extends PHPUnit_Framework_TestCase
 		$document->setValue('userName_3', 'Ray');
 		$document->setValue('userPhone_3', '+1 428 889 775');
 
-		$document->save('./tests/output/CloneRow.pdf');
+		$document->save('./tests/output/GoogleCloneRow.pdf');
 
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/CloneRow.pdf'))->to('ascii');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/GoogleCloneRow.pdf'))->to('ascii');
 
 		$this->assertTrue($text->contains('Value 1: Sun'));
 		$this->assertTrue($text->contains('Value 2: Mercury'));
@@ -138,8 +156,16 @@ class PdfTest extends PHPUnit_Framework_TestCase
 		$this->assertTrue($text->contains('Value 9: Neptun'));
 		$this->assertTrue($text->contains('Value 10: Pluto'));
 
-		$this->assertTrue($text->contains("1 Name Taylor\nFirst name James\nPhone +1 428 889 773"));
-		$this->assertTrue($text->contains("2 Name Bell\nFirst name Robert\nPhone +1 428 889 774"));
-		$this->assertTrue($text->contains("3 Name Ray\nFirst name Michael\nPhone +1 428 889 775"));
+		$this->assertTrue($text->contains('Taylor'));
+		$this->assertTrue($text->contains('James'));
+		$this->assertTrue($text->contains('+1 428 889 773'));
+
+		$this->assertTrue($text->contains('Bell'));
+		$this->assertTrue($text->contains('Robert'));
+		$this->assertTrue($text->contains('+1 428 889 774'));
+
+		$this->assertTrue($text->contains('Ray'));
+		$this->assertTrue($text->contains('Michael'));
+		$this->assertTrue($text->contains('+1 428 889 775'));
 	}
 }

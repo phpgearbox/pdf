@@ -13,11 +13,12 @@
 
 use ZipArchive;
 use SplFileInfo;
-use SimpleXMLElement;
 use RuntimeException;
 use Gears\String as Str;
 use Gears\Di\Container;
-use Symfony\Component\Process\Process;
+use Gears\Pdf\TempFile;
+use Gears\Pdf\SimpleXMLElement;
+use Gears\Pdf\Converter\Unoconv;
 use Symfony\Component\Filesystem\Filesystem;
 
 class Pdf extends Container
@@ -34,7 +35,7 @@ class Pdf extends Container
 	 * Property: tempDocument
 	 * =========================================================================
 	 * This will hold an instance of ```SplFileInfo```
-	 * pointing to the copy of [Property: template](#).
+	 * pointing to a copy of [Property: template](#).
 	 */
 	protected $tempDocument = false;
 
@@ -77,34 +78,39 @@ class Pdf extends Container
 	protected $injectZip;
 
 	/**
-	 * Property: unoconvBin
-	 * =========================================================================
-	 * This will store the location to the unoconvBin binary.
-	 */
-	protected $injectUnoconvBin;
-
-	/**
-	 * Property: fileInfo
+	 * Property: file
 	 * =========================================================================
 	 * A closure than returns a configured instance of ```SplFileInfo```.
 	 */
-	protected $injectFileInfo;
+	protected $injectFile;
 
 	/**
-	 * Property: process
+	 * Property: tempFile
 	 * =========================================================================
-	 * A closure that returns an instance of
-	 * ```Symfony\Component\Process\Process```
+	 * A closure than returns an instance of ```TempFile```.
 	 */
-	protected $injectProcess;
+	protected $injectTempFile;
 
 	/**
 	 * Property: xml
 	 * =========================================================================
-	 * A closure that returns an instance of
-	 * ```SimpleXMLElement```
+	 * A closure that returns an instance of ```SimpleXMLElement```
 	 */
 	protected $injectXml;
+
+	/**
+	 * Property: converter
+	 * =========================================================================
+	 * This must be supplied before any converstions will take place.
+	 */
+	protected $injectConverter;
+
+	/**
+	 * Property: staticConverter
+	 * =========================================================================
+	 * This is is only used in conjustction with the static [Method: convert](#)
+	 */
+	public static $staticConverter;
 
 	/**
 	 * Method: setDefaults
@@ -133,22 +139,25 @@ class Pdf extends Container
 			return new ZipArchive;
 		};
 
-		$this->fileInfo = $this->protect(function($filePath)
+		$this->file = $this->protect(function($filePath)
 		{
 			return new SplFileInfo($filePath);
 		});
 
-		$this->process = $this->protect(function($cmd)
+		$this->tempFile = $this->protect(function()
 		{
-			return new Process($cmd);
+			return new TempFile('GearsPdf');
 		});
 
 		$this->xml = $this->protect(function($xml)
 		{
-			return new SimpleXMLElement($xml);
+			return SimpleXMLElement::fixSplitTags($xml);
 		});
 
-		$this->unoconvBin = '/usr/bin/unoconv';
+		$this->converter = function()
+		{
+			return new Unoconv();
+		};
 	}
 
 	/**
@@ -173,7 +182,7 @@ class Pdf extends Container
 	{
 		parent::__construct($config);
 
-		$this->template = $this->fileInfo($template);
+		$this->template = $this->file($template);
 
 		if ($this->template->getExtension() !== 'docx')
 		{
@@ -181,15 +190,6 @@ class Pdf extends Container
 			(
 				'Template must be an Open XML Document or docx file. '.
 				'This package does not work with the Open Document Format odt.'
-			);
-		}
-
-		if (!is_executable($this->unoconvBin))
-		{
-			throw new RuntimeException
-			(
-				'The unoconv command was not found or is not executable! '.
-				'This package uses unoconv to create the PDFs.'
 			);
 		}
 	}
@@ -215,6 +215,12 @@ class Pdf extends Container
 	public static function convert($docx, $pdf = null)
 	{
 		$instance = new static($docx);
+
+		if (!is_null(self::$staticConverter))
+		{
+			$instance->converter = self::$staticConverter;
+		}
+
 		return $instance->save($pdf);
 	}
 
@@ -235,13 +241,15 @@ class Pdf extends Container
 	 * Returns:
 	 * -------------------------------------------------------------------------
 	 * ```SplFileInfo```
-	 * 
-	 * Throws:
-	 * -------------------------------------------------------------------------
-	 *  - RuntimeException: If a path to the temp file could not be created.
 	 */
 	public function save($path = null)
 	{
+		// Make sure we have a valid converter
+		if (is_null($this->converter))
+		{
+			throw new RuntimeException('You must configure a converter!');
+		}
+
 		if ($this->tempDocument === false)
 		{
 			// If some one is just doing a simple conversion
@@ -250,74 +258,29 @@ class Pdf extends Container
 		}
 		else
 		{
-			// Make sure we save the searched and replaced version of the doc.
-			$doc = $this->tempDocument;
+			// Save the searched and replaced version of the doc.
 			$this->writeTempDocument();
-
-			if (is_null($path))
-			{
-				$path = Str::s($this->template->getPathname());
-				$path = $path->replace('.docx', '.pdf');
-			}
+			$doc = $this->tempDocument;
 		}
 
-		$path = $this->fileInfo($path);
-
-		// Build the unoconv cmd
-		$cmd = 'export HOME=/tmp && '.$this->unoconvBin.' -v -f pdf';
-		if (!is_null($path)) $cmd .= ' --output="'.$path->getPathname().'"';
-		$cmd .= ' "'.$doc->getPathname().'"';
-
-		// Run the command
-		$process = $this->process($cmd);
-		$process->run();
-
-		// Check for errors
-		$error = null;
-
-		if (!$process->isSuccessful())
+		// If no output path has been supplied save the file
+		// in the same folder as the original template.
+		if (is_null($path))
 		{
-			$error = $process->getErrorOutput();
-
-			// NOTE: For some really odd reason the first time the command runs
-			// it does not complete successfully. The second time around it
-			// works fine. It has something to do with the homedir setup...
-			if (Str::contains($error, 'Error: Unable to connect'))
-			{
-				$process->run();
-
-				if (!$process->isSuccessful())
-				{
-					$error = $process->getErrorOutput();
-				}
-				else
-				{
-					$error = null;
-				}
-			}
-
-			if (!is_null($error)) throw new RuntimeException($error);
+			$path = Str::s($this->template->getPathname());
+			$path = $path->replace('.docx', '.pdf');
 		}
+
+		// Now convert the document to PDF
+		$pdf = $this->converter->convertDoc($doc);
 
 		// Delete the temp document if it exists.
 		if ($this->tempDocument !== false) $this->deleteTempDocument();
 
-		// Parse the outputted file path
-		$output_file = $this->fileInfo(Str::between
-		(
-			$process->getOutput(), 'Output file: ', "\n"
-		));
-
-		// Sometimes on some installations of unoconv it doesn't save the file
-		// at the expected location, it instead saves the final file inside a
-		// folder with the same name as the file. The following corrects this.
-		if ($output_file->getPathname() != $path->getPathname())
+		// Save the pdf to the output path
+		if (@file_put_contents($path, $pdf) === false)
 		{
-			$temp = $this->createTempFilename();
-			$this->fileSystem->copy($output_file, $temp, true);
-			$this->fileSystem->remove($output_file->getPath());
-			$this->fileSystem->copy($temp, $path, true);
-			$this->fileSystem->remove($temp);
+			throw new RuntimeException('Failed to write to file "'.$path.'".');
 		}
 
 		// Return the location of the saved pdf
@@ -330,9 +293,6 @@ class Pdf extends Container
 	 * Instead of saving the pdf, perhaps you just want to send it directly
 	 * to the browser as a down-loadable file. This method will generate the
 	 * PDF and send the appropriate headers for you.
-	 * 
-	 * TODO: Ideally I would like to avoid the use of yet another temp file.
-	 *       Can we pipe the output from unoconv directly back into PHP?
 	 * 
 	 * Parameters:
 	 * -------------------------------------------------------------------------
@@ -347,7 +307,7 @@ class Pdf extends Container
 		// Send some headers
 		header('Content-Type: application/pdf');
 		header('Content-Disposition: attachment; filename="'.$filename.'"');
-		echo $this->getPdfRaw();
+		echo $this->converter->convertDoc($this->tempDocument);
 	}
 
 	/**
@@ -355,9 +315,6 @@ class Pdf extends Container
 	 * =========================================================================
 	 * Unlike the download method this will stream the PDF to the browser.
 	 * ie: It will open inside the browsers PDF reader.
-	 * 
-	 * TODO: Ideally I would like to avoid the use of yet another temp file.
-	 *       Can we pipe the output from unoconv directly back into PHP?
 	 * 
 	 * Parameters:
 	 * -------------------------------------------------------------------------
@@ -367,12 +324,12 @@ class Pdf extends Container
 	 * -------------------------------------------------------------------------
 	 * void
 	 */
-	public function stream($filename = 'download.pdf')
+	public function stream()
 	{
 		// Send some headers
 		header('Content-Type: application/pdf');
-		header('Content-Disposition: inline; filename="'.$filename.'"');
-		echo $this->getPdfRaw();
+		header('Content-Disposition: inline; filename="stream.pdf"');
+		echo $this->converter->convertDoc($this->tempDocument);
 	}
 
 	/**
@@ -680,84 +637,6 @@ class Pdf extends Container
 	}
 
 	/**
-	 * Method: getPdfRaw
-	 * =========================================================================
-	 * This is used by [Method: download](#) and [Method: stream](#).
-	 * 
-	 * TODO: Ideally I would like to avoid the use of yet another temp file.
-	 *       Can we pipe the output from unoconv directly back into PHP?
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 * n/a
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * binary pdf data 
-	 */
-	protected function getPdfRaw()
-	{
-		$temp = $this->createTempFilename();
-		$pdf = file_get_contents($this->save($temp));
-		$this->fileSystem->remove($temp);
-		return $pdf;
-	}
-
-	/**
-	 * Method: createTempDocument
-	 * =========================================================================
-	 * We don't want to make any changes to the actual template document.
-	 * So we need to copy the template to a temp location and edit that copy.
-	 * This makes the copy.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 * n/a
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
-	 */
-	protected function createTempDocument()
-	{
-		$this->tempDocument = $this->createTempFilename();
-
-		$this->fileSystem->copy($this->template, $this->tempDocument, true);
-	}
-
-	/**
-	 * Method: createTempFilename
-	 * =========================================================================
-	 * Please don't confuse this with [Method: createTempDocument](#).
-	 * This method is used several times, each time we need a new temp file.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 * n/a
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * A new instance of ```SplFileInfo```.
-	 * 
-	 * Throws:
-	 * -------------------------------------------------------------------------
-	 *  - RuntimeException: If a path to the temp file could not be created.
-	 */
-	protected function createTempFilename()
-	{
-		if (($temp = tempnam(sys_get_temp_dir(), 'GearsPdf')) === false)
-		{
-			throw new RuntimeException
-			(
-				'Could not create temporary file with unique name '.
-				'in your systems default temporary directory.'
-			);
-		}
-
-		return $this->fileInfo($temp);
-	}
-
-	/**
 	 * Method: readTempDocument
 	 * =========================================================================
 	 * This method uses ```ZipArchive``` to open up the temp docx template file.
@@ -774,8 +653,12 @@ class Pdf extends Container
 	 */
 	protected function readTempDocument()
 	{
-		$this->createTempDocument();
+		// Create the temp document
+		// We don't want to make any changes to the original template file
+		$this->tempDocument = $this->tempFile();
+		$this->fileSystem->copy($this->template, $this->tempDocument, true);
 
+		// Open the temp document
 		if ($this->zip->open($this->tempDocument) !== true)
 		{
 			throw new RuntimeException
@@ -788,36 +671,33 @@ class Pdf extends Container
 		$index = 1;
 		while ($this->zip->locateName($this->getHeaderName($index)) !== false)
 		{
-			$this->headerXMLs[$index] = $this->fixSplitTags
+			$this->headerXMLs[$index] = $this->xml
 			(
-				$this->xml($this->zip->getFromName
+				$this->zip->getFromName
 				(
 					$this->getHeaderName($index)
-				))
+				)
 			);
 
 			$index++;
 		}
 
 		// Read in the main body
-		$this->documentXML = $this->fixSplitTags
+		$this->documentXML = $this->xml
 		(
-			$this->xml
-			(
-				$this->zip->getFromName('word/document.xml')
-			)
+			$this->zip->getFromName('word/document.xml')
 		);
 
 		// Read in the footers
 		$index = 1;
 		while ($this->zip->locateName($this->getFooterName($index)) !== false)
 		{
-			$this->footerXMLs[$index] = $this->fixSplitTags
+			$this->footerXMLs[$index] = $this->xml
 			(
-				$this->xml($this->zip->getFromName
+				$this->zip->getFromName
 				(
 					$this->getFooterName($index)
-				))
+				)
 			);
 			
 			$index++;
@@ -1128,50 +1008,5 @@ class Pdf extends Container
 		preg_match($this->getBlockRegx($nodes), $xml->asXml(), $matches);
 
 		return $matches;
-	}
-
-	/**
-	 * Method: fixSplitTags
-	 * =========================================================================
-	 * If part of the tag is formatted differently we won't get a match.
-	 * Best explained with an example:
-	 * 
-	 * ```xml
-	 * <w:r>
-	 * 	<w:rPr/>
-	 * 	<w:t>Hello ${tag_</w:t>
-	 * </w:r>
-	 * <w:r>
-	 * 	<w:rPr>
-	 * 		<w:b/>
-	 * 		<w:bCs/>
-	 * 	</w:rPr>
-	 * 	<w:t>1}</w:t>
-	 * </w:r>
-	 * ```
-	 * 
-	 * The above becomes, after running through this method:
-	 * 
-	 * ```xml
-	 * <w:r>
-	 * 	<w:rPr/>
-	 * 	<w:t>Hello ${tag_1}</w:t>
-	 * </w:r>
-	 * ```
-	 */
-	protected function fixSplitTags($xml)
-	{
-		$xml = $xml->asXml();
-
-		preg_match_all('|\$\{([^\}]+)\}|U', $xml, $matches);
-
-		foreach ($matches[0] as $value)
-		{
-			$valueCleaned = preg_replace('/<[^>]+>/', '', $value);
-			$valueCleaned = preg_replace('/<\/[^>]+>/', '', $valueCleaned);
-			$xml = str_replace($value, $valueCleaned, $xml);
-		}
-
-		return $this->xml($xml);
 	}
 }
