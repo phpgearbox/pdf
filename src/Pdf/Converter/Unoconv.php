@@ -13,6 +13,7 @@
 
 use SplFileInfo;
 use Gears\Di\Container;
+use Gears\String as Str;
 use Symfony\Component\Process\Process;
 
 class Unoconv extends Container
