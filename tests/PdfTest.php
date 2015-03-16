@@ -137,9 +137,9 @@ class PdfTest extends PHPUnit_Framework_TestCase
 		$this->assertTrue($text->contains('Value 8: Uranus'));
 		$this->assertTrue($text->contains('Value 9: Neptun'));
 		$this->assertTrue($text->contains('Value 10: Pluto'));
-
-		$this->assertTrue($text->contains("1 Name Taylor\nFirst name James\nPhone +1 428 889 773"));
-		$this->assertTrue($text->contains("2 Name Bell\nFirst name Robert\nPhone +1 428 889 774"));
-		$this->assertTrue($text->contains("3 Name Ray\nFirst name Michael\nPhone +1 428 889 775"));
+		
+		$this->assertTrue($text->contains("1 Name TaylorFirst name JamesPhone +1 428 889 773"));
+		$this->assertTrue($text->contains("2 Name BellFirst name RobertPhone +1 428 889 774"));
+		$this->assertTrue($text->contains("3 Name RayFirst name MichaelPhone +1 428 889 775"));
 	}
 }

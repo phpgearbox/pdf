@@ -29,8 +29,8 @@ class PdfGoogleTest extends PHPUnit_Framework_TestCase
 		{
 			return new Gears\Pdf\Converter\Google
 			([
-				'serviceAccountEmail' => '1016040153537-bd5v9bk5t7g39663vbnjhf5qldjueoid@developer.gserviceaccount.com',
-				'serviceAccountKeyFile' => '/home/bj/Downloads/My Project-31504ed7d736.p12'
+				'serviceAccountEmail' => 'PUT YOUR OWN GOOGLE DETAILS HERE',
+				'serviceAccountKeyFile' => 'PUT YOUR OWN GOOGLE DETAILS HERE'
 			]);
 		};
 	}
