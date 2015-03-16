@@ -193,6 +193,28 @@ class Pdf extends Container
 			);
 		}
 	}
+	
+	/**
+	 * Method: __destruct
+	 * =========================================================================
+	 * Lets clean up after ourselves.
+	 * 
+	 * Parameters:
+	 * -------------------------------------------------------------------------
+	 * n/a
+	 * 
+	 * Returns:
+	 * -------------------------------------------------------------------------
+	 * void
+	 */
+	public function __destruct()
+	{
+		// Delete the temp document if it exists.
+		if ($this->tempDocument !== false)
+		{
+			$this->deleteTempDocument();
+		}
+	}
 
 	/**
 	 * Method: convert
@@ -244,25 +266,9 @@ class Pdf extends Container
 	 */
 	public function save($path = null)
 	{
-		// Make sure we have a valid converter
-		if (is_null($this->converter))
-		{
-			throw new RuntimeException('You must configure a converter!');
-		}
-
-		if ($this->tempDocument === false)
-		{
-			// If some one is just doing a simple conversion
-			// we can just use the original template document.
-			$doc = $this->template;
-		}
-		else
-		{
-			// Save the searched and replaced version of the doc.
-			$this->writeTempDocument();
-			$doc = $this->tempDocument;
-		}
-
+		// Now convert the document to PDF
+		$pdf = $this->converter->convertDoc($this->writeTempDocument());
+		
 		// If no output path has been supplied save the file
 		// in the same folder as the original template.
 		if (is_null($path))
@@ -270,12 +276,6 @@ class Pdf extends Container
 			$path = Str::s($this->template->getPathname());
 			$path = $path->replace('.docx', '.pdf');
 		}
-
-		// Now convert the document to PDF
-		$pdf = $this->converter->convertDoc($doc);
-
-		// Delete the temp document if it exists.
-		if ($this->tempDocument !== false) $this->deleteTempDocument();
 
 		// Save the pdf to the output path
 		if (@file_put_contents($path, $pdf) === false)
@@ -298,16 +298,22 @@ class Pdf extends Container
 	 * -------------------------------------------------------------------------
 	 *  - $filename: This is the name of the file that the browser will see.
 	 * 
+	 *  - $exit: To ensure no extra content is added to the PDF we will by
+	 *           default die after outputting it. If you want to overide this
+	 *           behaviour feel free just make sure you don't seend any extra
+	 *           bytes otherwise your PDF will be corrupt.
+	 * 
 	 * Returns:
 	 * -------------------------------------------------------------------------
 	 * void
 	 */
-	public function download($filename = 'download.pdf')
+	public function download($filename = 'download.pdf', $exit = true)
 	{
 		// Send some headers
 		header('Content-Type: application/pdf');
 		header('Content-Disposition: attachment; filename="'.$filename.'"');
-		echo $this->converter->convertDoc($this->tempDocument);
+		echo $this->converter->convertDoc($this->writeTempDocument());
+		if ($exit) exit;
 	}
 
 	/**
@@ -318,18 +324,22 @@ class Pdf extends Container
 	 * 
 	 * Parameters:
 	 * -------------------------------------------------------------------------
-	 * n/a
+	 *  - $exit: To ensure no extra content is added to the PDF we will by
+	 *           default die after outputting it. If you want to overide this
+	 *           behaviour feel free just make sure you don't seend any extra
+	 *           bytes otherwise your PDF will be corrupt.
 	 * 
 	 * Returns:
 	 * -------------------------------------------------------------------------
 	 * void
 	 */
-	public function stream()
+	public function stream($exit = true)
 	{
 		// Send some headers
 		header('Content-Type: application/pdf');
 		header('Content-Disposition: inline; filename="stream.pdf"');
-		echo $this->converter->convertDoc($this->tempDocument);
+		echo $this->converter->convertDoc($this->writeTempDocument());
+		if ($exit) exit;
 	}
 
 	/**
@@ -720,6 +730,21 @@ class Pdf extends Container
 	 */
 	protected function writeTempDocument()
 	{
+		// Make sure we have a valid converter
+		// We perform this check here because we assume the results of
+		// this method call will be passed directly to the converter.
+		if (is_null($this->converter))
+		{
+			throw new RuntimeException('You must configure a converter!');
+		}
+		
+		// If some one is just doing a simple conversion we have no temp
+		// document to save, hence we just pass the original back to the caller.
+		if ($this->tempDocument === false)
+		{
+			return $this->template;
+		}
+		
 		// Write the headers
 		foreach ($this->headerXMLs as $index => $headerXML)
 		{
@@ -752,6 +777,9 @@ class Pdf extends Container
 				'Could not close the temp template document!'
 			);
 		}
+		
+		// Return the temp document
+		return $this->tempDocument;
 	}
 
 	/**

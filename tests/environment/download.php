@@ -15,3 +15,15 @@ require('../../vendor/autoload.php');
 
 $doc = new Gears\Pdf('../templates/Convert.docx');
 $doc->download();
+
+/*
+ * NOTE: The trick I have found to get Unoconv to work with apache it to start
+ * a listener via the command line first. For example:
+ * 
+ * ```
+ * unoconv --listener &
+ * ```
+ * 
+ * So on your server you just need to make sure this is started on boot.
+ * Maybe i'll get around to writing a init script for it...
+ */
