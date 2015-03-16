@@ -27,10 +27,10 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	public function testConvert()
 	{
 		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/Convert.pdf');
+		
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/Convert.pdf'))->to('ascii');
 
-		$text = $this->pdfBox->textFromPdfFile('./tests/output/Convert.pdf');
-
-		$this->assertTrue(Str::contains($text, 'Demonstration of DOCX support'));
+		$this->assertTrue($text->contains('Demonstration of DOCX support'));
 	}
 
 	public function testSetValue()
