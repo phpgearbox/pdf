@@ -35,9 +35,9 @@ class PdfLibreOfficeTest extends PHPUnit_Framework_TestCase
 
 		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/LibreOfficeConvert.pdf');
 
-		$text = $this->pdfBox->textFromPdfFile('./tests/output/LibreOfficeConvert.pdf');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/LibreOfficeConvert.pdf'))->to('ascii');
 
-		$this->assertTrue(Str::contains($text, 'Demonstration of DOCX support'));
+		$this->assertTrue($text->contains('Demonstration of DOCX support'));
 	}
 
 	public function testSetValue()

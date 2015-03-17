@@ -35,9 +35,9 @@ class PdfUnoconvTest extends PHPUnit_Framework_TestCase
 
 		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/UnoconvoConvert.pdf');
 
-		$text = $this->pdfBox->textFromPdfFile('./tests/output/UnoconvoConvert.pdf');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/UnoconvConvert.pdf'))->to('ascii');
 
-		$this->assertTrue(Str::contains($text, 'Demonstration of DOCX support'));
+		$this->assertTrue($text->contains('Demonstration of DOCX support'));
 	}
 
 	public function testSetValue()
