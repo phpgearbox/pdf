@@ -12,6 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 use SplFileInfo;
+use RuntimeException;
 use Gears\Di\Container;
 use Google_Client as GClient;
 use Google_Http_Request as GRequest;

@@ -12,6 +12,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 use SplFileInfo;
+use RuntimeException;
 use Gears\Di\Container;
 use Gears\String as Str;
 use Symfony\Component\Process\Process;
