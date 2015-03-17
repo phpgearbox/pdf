@@ -33,7 +33,7 @@ class PdfUnoconvTest extends PHPUnit_Framework_TestCase
 	{
 		Gears\Pdf::$staticConverter = $this->converter;
 
-		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/UnoconvoConvert.pdf');
+		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/UnoconvConvert.pdf');
 
 		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/UnoconvConvert.pdf'))->to('ascii');
 
