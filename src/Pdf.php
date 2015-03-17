@@ -19,6 +19,7 @@ use Gears\Di\Container;
 use Gears\Pdf\TempFile;
 use Gears\Pdf\SimpleXMLElement;
 use Gears\Pdf\Converter\Unoconv;
+use Gears\Pdf\Converter\LibreOffice;
 use Symfony\Component\Filesystem\Filesystem;
 
 class Pdf extends Container
@@ -156,7 +157,7 @@ class Pdf extends Container
 
 		$this->converter = function()
 		{
-			return new Unoconv();
+			return new LibreOffice();
 		};
 	}
 

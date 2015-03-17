@@ -1,20 +1,20 @@
 <?php
 ////////////////////////////////////////////////////////////////////////////////
-// __________ __             ________                   __________              
+// __________ __             ________                   __________
 // \______   \  |__ ______  /  _____/  ____ _____ ______\______   \ _______  ___
 //  |     ___/  |  \\____ \/   \  ____/ __ \\__  \\_  __ \    |  _//  _ \  \/  /
-//  |    |   |   Y  \  |_> >    \_\  \  ___/ / __ \|  | \/    |   (  <_> >    < 
+//  |    |   |   Y  \  |_> >    \_\  \  ___/ / __ \|  | \/    |   (  <_> >    <
 //  |____|   |___|  /   __/ \______  /\___  >____  /__|  |______  /\____/__/\_ \
 //                \/|__|           \/     \/     \/             \/            \/
 // -----------------------------------------------------------------------------
-//          Designed and Developed by Brad Jones <brad @="bjc.id.au" />         
+//          Designed and Developed by Brad Jones <brad @="bjc.id.au" />
 // -----------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 
 use Gears\String as Str;
 use SGH\PdfBox\PdfBox;
 
-class PdfTest extends PHPUnit_Framework_TestCase
+class PdfUnoconvTest extends PHPUnit_Framework_TestCase
 {
 	protected $pdfBox;
 
@@ -22,24 +22,32 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	{
 		$this->pdfBox = new PdfBox;
 		$this->pdfBox->setPathToPdfBox('./tests/pdfbox-app-1.8.7.jar');
+
+		$this->converter = function()
+		{
+			return new Gears\Pdf\Converter\Unoconv();
+		};
 	}
 
 	public function testConvert()
 	{
-		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/Convert.pdf');
-		
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/Convert.pdf'))->to('ascii');
+		Gears\Pdf::$staticConverter = $this->converter;
 
-		$this->assertTrue($text->contains('Demonstration of DOCX support'));
+		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/UnoconvoConvert.pdf');
+
+		$text = $this->pdfBox->textFromPdfFile('./tests/output/UnoconvoConvert.pdf');
+
+		$this->assertTrue(Str::contains($text, 'Demonstration of DOCX support'));
 	}
 
 	public function testSetValue()
 	{
 		$document = new Gears\Pdf('./tests/templates/SetValue.docx');
+		$document->converter = $this->converter;
 		$document->setValue('name', 'Brad Jones');
-		$document->save('./tests/output/SetValue.pdf');
+		$document->save('./tests/output/UnoconvoSetValue.pdf');
 
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/SetValue.pdf'))->to('ascii');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/UnoconvoSetValue.pdf'))->to('ascii');
 
 		$this->assertTrue($text->contains('Hello Brad Jones.'));
 	}
@@ -47,10 +55,11 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	public function testCloneBlock()
 	{
 		$document = new Gears\Pdf('./tests/templates/CloneBlock.docx');
+		$document->converter = $this->converter;
 		$document->cloneBlock('CLONEME', 3);
-		$document->save('./tests/output/CloneBlock.pdf');
+		$document->save('./tests/output/UnoconvoCloneBlock.pdf');
 
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/CloneBlock.pdf'))->to('ascii');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/UnoconvoCloneBlock.pdf'))->to('ascii');
 
 		$this->assertFalse($text->contains('${CLONEME}'));
 		$this->assertEquals(3, substr_count($text, 'PHPWord can apply font'));
@@ -60,10 +69,11 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	public function testReplaceBlock()
 	{
 		$document = new Gears\Pdf('./tests/templates/ReplaceBlock.docx');
+		$document->converter = $this->converter;
 		$document->replaceBlock('REPLACEME', '<w:p><w:pPr><w:pStyle w:val="PreformattedText"/><w:rPr/></w:pPr><w:r><w:rPr/><w:t>I am replaced.</w:t></w:r></w:p>');
-		$document->save('./tests/output/ReplaceBlock.pdf');
+		$document->save('./tests/output/UnoconvoReplaceBlock.pdf');
 
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/ReplaceBlock.pdf'))->to('ascii');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/UnoconvoReplaceBlock.pdf'))->to('ascii');
 
 		$this->assertFalse($text->contains('${REPLACEME}'));
 		$this->assertTrue($text->contains('I am replaced.'));
@@ -73,10 +83,11 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	public function testDeleteBlock()
 	{
 		$document = new Gears\Pdf('./tests/templates/DeleteBlock.docx');
+		$document->converter = $this->converter;
 		$document->deleteBlock('DELETEME');
-		$document->save('./tests/output/DeleteBlock.pdf');
+		$document->save('./tests/output/UnoconvoDeleteBlock.pdf');
 
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/DeleteBlock.pdf'))->to('ascii');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/UnoconvoDeleteBlock.pdf'))->to('ascii');
 
 		$this->assertFalse($text->contains('${DELETEME}'));
 		$this->assertFalse($text->contains('This should be deleted.'));
@@ -86,6 +97,7 @@ class PdfTest extends PHPUnit_Framework_TestCase
 	public function testCloneRow()
 	{
 		$document = new Gears\Pdf('./tests/templates/CloneRow.docx');
+		$document->converter = $this->converter;
 
 		$document->cloneRow('rowValue', 10);
 		$document->setValue('rowValue_1', 'Sun');
@@ -123,9 +135,9 @@ class PdfTest extends PHPUnit_Framework_TestCase
 		$document->setValue('userName_3', 'Ray');
 		$document->setValue('userPhone_3', '+1 428 889 775');
 
-		$document->save('./tests/output/CloneRow.pdf');
+		$document->save('./tests/output/UnoconvoCloneRow.pdf');
 
-		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/CloneRow.pdf'))->to('ascii');
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/UnoconvoCloneRow.pdf'))->to('ascii');
 
 		$this->assertTrue($text->contains('Value 1: Sun'));
 		$this->assertTrue($text->contains('Value 2: Mercury'));
@@ -137,7 +149,7 @@ class PdfTest extends PHPUnit_Framework_TestCase
 		$this->assertTrue($text->contains('Value 8: Uranus'));
 		$this->assertTrue($text->contains('Value 9: Neptun'));
 		$this->assertTrue($text->contains('Value 10: Pluto'));
-		
+
 		$this->assertTrue($text->contains("1 Name TaylorFirst name JamesPhone +1 428 889 773"));
 		$this->assertTrue($text->contains("2 Name BellFirst name RobertPhone +1 428 889 774"));
 		$this->assertTrue($text->contains("3 Name RayFirst name MichaelPhone +1 428 889 775"));
