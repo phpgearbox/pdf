@@ -1,4 +1,4 @@
-<?php
+<?php namespace Gears\Pdf\Contracts;
 ////////////////////////////////////////////////////////////////////////////////
 // __________ __             ________                   __________              
 // \______   \  |__ ______  /  _____/  ____ _____ ______\______   \ _______  ___
@@ -11,19 +11,10 @@
 // -----------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 
-require('../../vendor/autoload.php');
+use Gears\Pdf\TempFile;
 
-$doc = new Gears\Pdf('../templates/action-plan-template.docx');
-$doc->stream();
-
-/*
- * NOTE: The trick I have found to get Unoconv to work with apache it to start
- * a listener via the command line first. For example:
- * 
- * ```
- * unoconv --listener &
- * ```
- * 
- * So on your server you just need to make sure this is started on boot.
- * Maybe i'll get around to writing a init script for it...
- */
+interface Backend
+{
+	public function __construct(TempFile $document, $config);
+	public function generate();
+}

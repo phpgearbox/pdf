@@ -1,48 +1,38 @@
-<?php namespace Gears\Pdf\Converter;
+<?php namespace Gears\Pdf\Docx\Converter;
 ////////////////////////////////////////////////////////////////////////////////
-// __________ __             ________                   __________
+// __________ __             ________                   __________              
 // \______   \  |__ ______  /  _____/  ____ _____ ______\______   \ _______  ___
 //  |     ___/  |  \\____ \/   \  ____/ __ \\__  \\_  __ \    |  _//  _ \  \/  /
-//  |    |   |   Y  \  |_> >    \_\  \  ___/ / __ \|  | \/    |   (  <_> >    <
+//  |    |   |   Y  \  |_> >    \_\  \  ___/ / __ \|  | \/    |   (  <_> >    < 
 //  |____|   |___|  /   __/ \______  /\___  >____  /__|  |______  /\____/__/\_ \
 //                \/|__|           \/     \/     \/             \/            \/
 // -----------------------------------------------------------------------------
-//          Designed and Developed by Brad Jones <brad @="bjc.id.au" />
+//          Designed and Developed by Brad Jones <brad @="bjc.id.au" />         
 // -----------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 
-use SplFileInfo;
 use RuntimeException;
 use Gears\Di\Container;
 use Gears\String as Str;
+use Gears\Pdf\TempFile;
 use Symfony\Component\Process\Process;
+use Gears\Pdf\Contracts\DocxConverter;
 
-class LibreOffice extends Container
+class Unoconv extends Container implements DocxConverter
 {
 	/**
 	 * Property: binary
 	 * =========================================================================
-	 * This stores the location of the libreoffice binary on the local system.
+	 * This stores the location of the unoconv binary on the local system.
 	 */
 	protected $injectBinary;
 
 	/**
 	 * Property: profile
 	 * =========================================================================
-	 * This stores the location of where libreoffice will create a temp user
-	 * profile. I guess we could use the the current users profile however when
-	 * used via Apache or another webserver this isn't possible.
+	 * This stores the location of where unoconv will use as a user profile.
 	 */
 	protected $injectProfile;
-
-	/**
-	 * Property: output
-	 * =========================================================================
-	 * Unlike unoconv libreoffice headless does not provide the ability to pipe
-	 * the generated pdf to stdout, instead it allows us to set an output folder
-	 * for where the generated PDFs will be saved.
-	 */
-	protected $injectOutput;
 
 	/**
 	 * Property: process
@@ -58,22 +48,20 @@ class LibreOffice extends Container
 	 * This is where we set all our defaults. If you need to customise this
 	 * container this is a good place to look to see what can be configured
 	 * and how to configure it.
-	 *
+	 * 
 	 * Parameters:
 	 * -------------------------------------------------------------------------
 	 * n/a
-	 *
+	 * 
 	 * Returns:
 	 * -------------------------------------------------------------------------
 	 * void
 	 */
 	protected function setDefaults()
 	{
-		$this->binary = '/usr/bin/libreoffice';
+		$this->binary = '/usr/bin/unoconv';
 
-		$this->profile = '/tmp/gears-pdf-libreoffice';
-
-		$this->output = '/tmp/gears-pdf-libreoffice/generated';
+		$this->profile = '/tmp/gears-pdf-unoconv';
 
 		$this->process = $this->protect(function($cmd)
 		{
@@ -85,25 +73,28 @@ class LibreOffice extends Container
 	 * Method: convertDoc
 	 * =========================================================================
 	 * This is where we actually do some converting of docx to pdf.
-	 * This converter uses the OpenOffice/LibreOffice Headless capabilities.
-	 *
+	 * We use the command line utility unoconv. Which is basically a slightly
+	 * fancier way of using OpenOffice/LibreOffice Headless.
+	 * 
+	 * See: http://dag.wiee.rs/home-made/unoconv/
+	 * 
 	 * Parameters:
 	 * -------------------------------------------------------------------------
 	 *  - $docx: This must be an instance of ```SplFileInfo```
 	 *           pointing to the document to convert.
-	 *
+	 * 
 	 * Returns:
 	 * -------------------------------------------------------------------------
 	 * void
 	 */
-	public function convertDoc(SplFileInfo $docx)
+	public function convertDoc(TempFile $docx)
 	{
 		if (!is_executable($this->binary))
 		{
 			throw new RuntimeException
 			(
-				'The libreoffice command ("'.$this->binary.'") '.
-				'was not found or is not executable by the current user! '
+				'The unoconv command was not found or is not executable! '.
+				'This class uses unoconv to create the PDFs.'
 			);
 		}
 
@@ -112,19 +103,18 @@ class LibreOffice extends Container
 		{
 			throw new RuntimeException
 			(
-				'If libreoffice does not have permissions to the User '.
+				'If unoconv does not have permissions to the User '.
 				'Profile directory ("'.$this->profile.'") the conversion '.
 				'will fail!'
 			);
 		}
 
-		// Build the cmd to run
+		// Build the unoconv cmd
 		$cmd =
+			'export HOME='.$this->profile.' && '.
 			$this->binary.' '.
-			'--headless '.
-			'-env:UserInstallation=file://'.$this->profile.' '.
-			'--convert-to pdf:writer_pdf_Export '.
-			'--outdir "'.$this->output.'" '.
+			'--stdout '.
+			'-f pdf '.
 			'"'.$docx->getPathname().'"'
 		;
 
@@ -133,24 +123,36 @@ class LibreOffice extends Container
 		$process->run();
 
 		// Check for errors
+		$error = null;
+
 		if (!$process->isSuccessful())
 		{
-			throw new RuntimeException
-			(
-				$process->getErrorOutput()
-			);
-		}
+			$error = $process->getErrorOutput();
 
-		// Grab the generated pdf
-		$pdf = file_get_contents
-		(
-			$this->output.'/'.$docx->getBasename('.docx').'.pdf'
-		);
+			// NOTE: For some really odd reason the first time the command runs
+			// it does not complete successfully. The second time around it
+			// works fine. It has something to do with the homedir setup...
+			if (Str::contains($error, 'Error: Unable to connect'))
+			{
+				$process->run();
+
+				if (!$process->isSuccessful())
+				{
+					$error = $process->getErrorOutput();
+				}
+				else
+				{
+					$error = null;
+				}
+			}
+
+			if (!is_null($error)) throw new RuntimeException($error);
+		}
 
 		// Clean up after ourselves
 		exec('rm -rf '.$this->profile);
 
-		// Finally return the generated pdf
-		return $pdf;
+		// Return the pdf data
+		return $process->getOutput();
 	}
 }

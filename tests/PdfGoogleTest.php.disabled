@@ -39,7 +39,7 @@ class PdfGoogleTest extends PHPUnit_Framework_TestCase
 	{
 		Gears\Pdf::$staticConverter = $this->converter;
 
-		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/GoogleConvert.pdf');
+		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/GoogleConvert.pdf', ['converter' => $this->converter]);
 
 		$text = $this->pdfBox->textFromPdfFile('./tests/output/GoogleConvert.pdf');
 

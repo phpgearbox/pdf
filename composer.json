@@ -17,7 +17,8 @@
 		"gears/di": "*",
 		"symfony/process": "2.*",
 		"symfony/filesystem": "2.*",
-		"google/apiclient": "1.*"
+		"google/apiclient": "1.*",
+		"jakoch/phantomjs-installer": "1.9.8"
 	},
 	"require-dev":
 	{
@@ -25,5 +26,10 @@
 		"phpunit/phpunit": "4.*",
 		"guzzlehttp/guzzle": "4.*",
 		"sgh/pdfbox": "dev-master"
+	},
+	"scripts":
+	{
+		"post-install-cmd": ["PhantomInstaller\\Installer::installPhantomJS"],
+		"post-update-cmd": ["PhantomInstaller\\Installer::installPhantomJS"]
 	}
 }

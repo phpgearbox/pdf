@@ -1,4 +1,4 @@
-<?php namespace Gears\Pdf\Converter;
+<?php namespace Gears\Pdf\Docx\Converter;
 ////////////////////////////////////////////////////////////////////////////////
 // __________ __             ________                   __________              
 // \______   \  |__ ______  /  _____/  ____ _____ ______\______   \ _______  ___
@@ -11,17 +11,17 @@
 // -----------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 
-use SplFileInfo;
 use RuntimeException;
 use Gears\Di\Container;
+use Gears\Pdf\TempFile;
 use Google_Client as GClient;
 use Google_Http_Request as GRequest;
 use Google_Auth_AssertionCredentials as GAuth;
 use Google_Service_Drive as GDrive;
 use Google_Service_Drive_DriveFile as GFile;
+use Gears\Pdf\Contracts\DocxConverter;
 
-
-class Google extends Container
+class Google extends Container implements DocxConverter
 {
 	/**
 	 * Property: serviceAccountEmail
@@ -172,18 +172,13 @@ class Google extends Container
 	 * -------------------------------------------------------------------------
 	 * void
 	 */
-	public function convertDoc(SplFileInfo $docx)
+	public function convertDoc(TempFile $docx)
 	{
-		if (($contents = @file_get_contents($docx)) === false)
-		{
-			throw new RuntimeException('Failed to read docx file!');
-		}
-
 		// Upload the document to google
 		$gdoc = $this->service->files->insert($this->file,
 		[
 			'convert' => true,
-			'data' => $contents,
+			'data' => $docx->getContents(),
 			'mimeType' => $this->mime,
 			'uploadType' => 'multipart'
 		]);

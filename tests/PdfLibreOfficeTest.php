@@ -25,15 +25,13 @@ class PdfLibreOfficeTest extends PHPUnit_Framework_TestCase
 
 		$this->converter = function()
 		{
-			return new Gears\Pdf\Converter\LibreOffice();
+			return new Gears\Pdf\Docx\Converter\LibreOffice();
 		};
 	}
 
 	public function testConvert()
 	{
-		Gears\Pdf::$staticConverter = $this->converter;
-
-		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/LibreOfficeConvert.pdf');
+		Gears\Pdf::convert('./tests/templates/Convert.docx', './tests/output/LibreOfficeConvert.pdf', ['converter' => $this->converter]);
 
 		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/LibreOfficeConvert.pdf'))->to('ascii');
 

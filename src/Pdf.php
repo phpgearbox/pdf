@@ -11,271 +11,195 @@
 // -----------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 
-use ZipArchive;
 use SplFileInfo;
 use RuntimeException;
 use Gears\String as Str;
 use Gears\Di\Container;
 use Gears\Pdf\TempFile;
-use Gears\Pdf\SimpleXMLElement;
-use Gears\Pdf\Converter\Unoconv;
-use Gears\Pdf\Converter\LibreOffice;
-use Symfony\Component\Filesystem\Filesystem;
 
 class Pdf extends Container
 {
 	/**
-	 * Property: template
-	 * =========================================================================
-	 * Location to the docx document to use as the template for our PDF.
-	 * Set as the first argument of the constructor of this class.
+	 * This holds an instance of ```Gears\Pdf\TempFile```
+	 * pointing to the document we will convert to PDF.
 	 */
-	protected $template;
-
+	protected $document;
+	
 	/**
-	 * Property: tempDocument
-	 * =========================================================================
-	 * This will hold an instance of ```SplFileInfo```
-	 * pointing to a copy of [Property: template](#).
+	 * This holds an instance of ```SplFileInfo```
+	 * pointing to the original untouched document.
+	 * 
+	 * OR
+	 * 
+	 * NULL if a HTML string is provided.
 	 */
-	protected $tempDocument = false;
-
+	protected $originalDocument;
+	
 	/**
-	 * Property: documentXML
-	 * =========================================================================
-	 * This is where store the main ```word/document.xml``` of the docx file.
-	 * It will be an instance of ```SimpleXMLElement```.
+	 * The type of source document we are to convert to PDF
+	 * Valid values for this are: ```docx```, ```html```
 	 */
-	protected $documentXML;
-
+	private $documentType;
+	
 	/**
-	 * Property: headerXMLs
-	 * =========================================================================
-	 * This is where store any header xml. ie: ```word/header1.xml```.
-	 * It will contains instances of ```SimpleXMLElement```.
+	 * This class is simply just a Facade to create a fluent api for the end
+	 * user. This class doesn't do any of the actual converting. Based on the
+	 * document type it will proxy calls to the appropriate backend class.
 	 */
-	protected $headerXMLs = [];
-
+	protected $backend;
+	
 	/**
-	 * Property: footerXMLs
-	 * =========================================================================
-	 * This is where store any footer xml. ie: ```word/footer1.xml```.
-	 * It will contains instances of ```SimpleXMLElement```.
-	 */
-	protected $footerXMLs = [];
-
-	/**
-	 * Property: fileSystem
-	 * =========================================================================
-	 * An instance of ```Symfony\Component\Filesystem\Filesystem```.
-	 */
-	protected $injectFileSystem;
-
-	/**
-	 * Property: zip
-	 * =========================================================================
-	 * An instance of ```ZipArchive```.
-	 */
-	protected $injectZip;
-
-	/**
-	 * Property: file
-	 * =========================================================================
 	 * A closure than returns a configured instance of ```SplFileInfo```.
 	 */
 	protected $injectFile;
-
+	
 	/**
-	 * Property: tempFile
-	 * =========================================================================
-	 * A closure than returns an instance of ```TempFile```.
+	 * A closure than returns an instance of ```Gears\Pdf\TempFile```.
 	 */
 	protected $injectTempFile;
-
+	
 	/**
-	 * Property: xml
-	 * =========================================================================
-	 * A closure that returns an instance of ```SimpleXMLElement```
-	 */
-	protected $injectXml;
-
-	/**
-	 * Property: converter
-	 * =========================================================================
-	 * This must be supplied before any converstions will take place.
-	 */
-	protected $injectConverter;
-
-	/**
-	 * Property: staticConverter
-	 * =========================================================================
-	 * This is is only used in conjustction with the static [Method: convert](#)
-	 */
-	public static $staticConverter;
-
-	/**
-	 * Method: setDefaults
-	 * =========================================================================
+	 * Set Container Defaults
+	 * 
 	 * This is where we set all our defaults. If you need to customise this
 	 * container this is a good place to look to see what can be configured
 	 * and how to configure it.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 * n/a
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
 	 */
 	protected function setDefaults()
 	{
-		$this->fileSystem = function()
-		{
-			return new Filesystem;
-		};
-
-		$this->zip = function()
-		{
-			return new ZipArchive;
-		};
-
 		$this->file = $this->protect(function($filePath)
 		{
 			return new SplFileInfo($filePath);
 		});
-
-		$this->tempFile = $this->protect(function()
+		
+		$this->tempFile = $this->protect(function($contents, $ext)
 		{
-			return new TempFile('GearsPdf');
+			$file = new TempFile('GearsPdf', $ext);
+			
+			$file->setContents($contents);
+			
+			return $file;
 		});
-
-		$this->xml = $this->protect(function($xml)
-		{
-			return SimpleXMLElement::fixSplitTags($xml);
-		});
-
-		$this->converter = function()
-		{
-			return new LibreOffice();
-		};
 	}
 
 	/**
-	 * Method: __construct
-	 * =========================================================================
-	 * Performs some intial setup so we can convert the docx document to a PDF.
+	 * Performs some intial Setup.
 	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $template: The filepath to a docx template.
-	 *  - $config: Further configuration for the di container.
+	 * @param string $document This is either a filepath to a docx or html file.
+	 *                         Or it may be a HTML string. The HTML string must
+	 *                         contain a valid DOCTYPE.
 	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
+	 * @param array $config Further configuration for the di container.
 	 * 
-	 * Throws:
-	 * -------------------------------------------------------------------------
-	 *  - RuntimeException: Not of the correct template type.
+	 * @throws RuntimeException When not of the correct document type.
 	 */
-	public function __construct($template, $config = [])
+	public function __construct($document, $config = [])
 	{
+		// Configure the container
 		parent::__construct($config);
-
-		$this->template = $this->file($template);
-
-		if ($this->template->getExtension() !== 'docx')
+		
+		// Is the document a file
+		if (is_file($document))
 		{
-			throw new RuntimeException
-			(
-				'Template must be an Open XML Document or docx file. '.
-				'This package does not work with the Open Document Format odt.'
-			);
+			// So that the save method can save the PDF in the same folder as
+			// the original source document we need a refrence to it.
+			$this->originalDocument = $this->file($document);
+			
+			// Grab the files extension
+			$ext = $this->originalDocument->getExtension();
+			if ($ext !== 'docx' && $ext !== 'html')
+			{
+				throw new RuntimeException('Must be a DOCX or HTML file.');
+			}
+			$this->documentType = $ext;
+			
+			// Save the document to a new temp file
+			// In the case of DOCX files we may make changes to the document
+			// before converting to PDF so to keep the API consitent lets create
+			// a the temp file now.
+			$this->document = $this->tempFile(file_get_contents($document), $ext);
 		}
+		
+		// Check for a HTML string
+		elseif (Str::contains($document, 'DOCTYPE'))
+		{
+			// Again lets save a temp file
+			$this->document = $this->tempFile($document, 'html');
+			
+			$this->documentType = 'html';
+		}
+		else
+		{
+			throw new RuntimeException('Unrecognised document type!');
+		}
+		
+		// Now create a new backend
+		$class = '\\Gears\\Pdf\\'.ucfirst($this->documentType).'\\Backend';
+		$this->backend = new $class($this->document, $config);
 	}
-	
-	/**
-	 * Method: __destruct
-	 * =========================================================================
-	 * Lets clean up after ourselves.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 * n/a
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
-	 */
-	public function __destruct()
-	{
-		// Delete the temp document if it exists.
-		if ($this->tempDocument !== false)
-		{
-			$this->deleteTempDocument();
-		}
-	}
 
 	/**
-	 * Method: convert
-	 * =========================================================================
-	 * If all you want to do is convert a docx document into a pdf document.
-	 * This is a shortcut method to do just that.
+	 * Shortcut Converter
 	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $docx: This is the path to the source document.
+	 * If all you want to do is convert a document into a pdf,
+	 * this is a shortcut method to do just that.
 	 * 
-	 *  - $pdf: Optionally you may supply an output path of the pdf,
-	 *    if not supplied we will create the PDF in the name folder as
-	 *    the source document with the same filename.
+	 * @param string $document This is either a filepath to a docx or html file.
+	 *                         Or it may be a HTML string. The HTML string must
+	 *                         contain a valid DOCTYPE.
 	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * An instance of of ```SplFileInfo``` pointing to the pdf document.
+	 * @param string $pdf Optionally you may supply an output path of the pdf,
+	 *                    if not supplied we will create the PDF in the same
+	 *                    folder as the source document with the same filename.
+	 *                    If you supplied a HTML string as the document we will
+	 *                    return the generated PDF bytes.
+	 * 
+	 * @return mixed SplFileInfo or PDF Bytes
 	 */
-	public static function convert($docx, $pdf = null)
+	public static function convert($document, $pdf = null, $config = [])
 	{
-		$instance = new static($docx);
-
-		if (!is_null(self::$staticConverter))
+		$instance = new static($document, $config);
+		
+		if (!is_file($document))
 		{
-			$instance->converter = self::$staticConverter;
+			return $instance->backend->generate();
 		}
-
+		
 		return $instance->save($pdf);
 	}
 
 	/**
-	 * Method: save
-	 * =========================================================================
-	 * To save the document, simply call this method.
+	 * Saves the generated PDF.
 	 * 
-	 * This is where we run the unoconv command and
-	 * actually covert the docx document to a pdf.
+	 * We call the backend class to generate the PDF for us.
+	 * Then we attempt to save those bytes to a permanent location.
 	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $path: Optionally you may supply an output path of the pdf,
-	 *    if not supplied we will create the PDF in the name folder as
-	 *    the source document with the same filename.
+	 * @param string $path If not supplied we will create the PDF in the name
+	 *                     folder as the source document with the same filename.
 	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * ```SplFileInfo```
+	 * @return SplFileInfo
 	 */
 	public function save($path = null)
 	{
-		// Now convert the document to PDF
-		$pdf = $this->converter->convertDoc($this->writeTempDocument());
+		$pdf = $this->backend->generate();
 		
 		// If no output path has been supplied save the file
 		// in the same folder as the original template.
 		if (is_null($path))
 		{
-			$path = Str::s($this->template->getPathname());
-			$path = $path->replace('.docx', '.pdf');
+			if (is_null($this->originalDocument))
+			{
+				// This will be thrown when someone attemtps to use
+				// the save method when they have supplied a HTML string.
+				throw new RuntimeException
+				(
+					'You must supply a path for us to save the PDF!'
+				);
+			}
+			
+			$ext = $this->originalDocument->getExtension();
+			$path = Str::s($this->originalDocument->getPathname());
+			$path = $path->replace('.'.$ext, '.pdf');
 		}
 
 		// Save the pdf to the output path
@@ -285,757 +209,82 @@ class Pdf extends Container
 		}
 
 		// Return the location of the saved pdf
-		return $path;
+		return $this->file($path);
 	}
 
 	/**
-	 * Method: download
-	 * =========================================================================
-	 * Instead of saving the pdf, perhaps you just want to send it directly
-	 * to the browser as a down-loadable file. This method will generate the
-	 * PDF and send the appropriate headers for you.
+	 * Http Download
 	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $filename: This is the name of the file that the browser will see.
+	 * If invoked via Apache, PHP-FPM, etc. You may just want to send the PDF
+	 * directly to the browser as a downloadable file. This method will generate
+	 * the PDF and send the appropriate headers for you.
 	 * 
-	 *  - $exit: To ensure no extra content is added to the PDF we will by
-	 *           default die after outputting it. If you want to overide this
-	 *           behaviour feel free just make sure you don't seend any extra
-	 *           bytes otherwise your PDF will be corrupt.
+	 * @param string $filename The name of the file that the browser will see.
 	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
+	 * @param boolean $exit To ensure no extra content is added to the PDF we
+	 *                      will by default die after outputting it. If you want
+	 *                      to overide ths behaviour feel free just make sure
+	 *                      you don't send any extra bytes otherwise your PDF
+	 *                      will be corrupt.
 	 */
 	public function download($filename = 'download.pdf', $exit = true)
 	{
 		// Send some headers
 		header('Content-Type: application/pdf');
 		header('Content-Disposition: attachment; filename="'.$filename.'"');
-		echo $this->converter->convertDoc($this->writeTempDocument());
+		echo $this->backend->generate();
 		if ($exit) exit;
 	}
 
 	/**
-	 * Method: stream
-	 * =========================================================================
+	 * Http Stream
+	 * 
 	 * Unlike the download method this will stream the PDF to the browser.
 	 * ie: It will open inside the browsers PDF reader.
 	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $exit: To ensure no extra content is added to the PDF we will by
-	 *           default die after outputting it. If you want to overide this
-	 *           behaviour feel free just make sure you don't seend any extra
-	 *           bytes otherwise your PDF will be corrupt.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
+	 * @param boolean $exit To ensure no extra content is added to the PDF we
+	 *                      will by default die after outputting it. If you want
+	 *                      to overide ths behaviour feel free just make sure
+	 *                      you don't send any extra bytes otherwise your PDF
+	 *                      will be corrupt.
 	 */
 	public function stream($exit = true)
 	{
 		// Send some headers
 		header('Content-Type: application/pdf');
 		header('Content-Disposition: inline; filename="stream.pdf"');
-		echo $this->converter->convertDoc($this->writeTempDocument());
+		echo $this->backend->generate();
 		if ($exit) exit;
 	}
-
+	
 	/**
-	 * Method: setValue
-	 * =========================================================================
-	 * Set a Template value.
+	 * Proxy Calls to Backend
 	 * 
-	 * This will search through all headers and footers
-	 * as well as the main document body.
+	 * Once a source document has been supplied and a backend choosen.
+	 * This will then proxy any unresolved method calls through to backend
+	 * class.
 	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $search: The tag name to search for.
-	 *  - $replace: The value to replace the tag with.
-	 *  - $limit: How many times to search for the tag.
+	 * The user can then perform further configuration and custmoistation to
+	 * the backend easily before calling one of the output methods above.
 	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
+	 * @param string $name
+	 * @param array $args
+	 * @return mixed
 	 */
-	public function setValue($search, $replace, $limit = -1)
+	public function __call($name, $args)
 	{
-		if ($this->tempDocument === false) $this->readTempDocument();
-
-		foreach ($this->headerXMLs as $index => $headerXML)
+		if ($this->offsetExists($name))
 		{
-			$this->headerXMLs[$index] = $this->setValueForPart
-			(
-				$this->headerXMLs[$index],
-				$search,
-				$replace,
-				$limit
-			);
+			return parent::__call($name, $args);
 		}
-
-		$this->documentXML = $this->setValueForPart
-		(
-			$this->documentXML,
-			$search,
-			$replace,
-			$limit
-		);
-
-		foreach ($this->footerXMLs as $index => $headerXML)
+		else
 		{
-			$this->footerXMLs[$index] = $this->setValueForPart
-			(
-				$this->footerXMLs[$index],
-				$search,
-				$replace,
-				$limit
-			);
-		}
-	}
-
-	/**
-	 * Method: cloneBlock
-	 * =========================================================================
-	 * Clones a block.
-	 * 
-	 * > NOTE: Currently only works in the main body content.
-	 * > Will not work in headers and footers.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $blockname: The name of the block to clone.
-	 *  - $clones: How many times do we want to clone the block.
-	 *  - $replace: Whether or not to replace the original block with the clones
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
-	 */
-	public function cloneBlock($blockname, $clones = 1, $replace = true)
-	{
-		if ($this->tempDocument === false) $this->readTempDocument();
-
-		$matches = $this->searchForBlock($this->documentXML, $blockname);
-
-		if (isset($matches[1]))
-		{
-			// The xml block to be cloned
-			$clone = $matches[1];
-
-			// An array of the cloned blocks of xml
-			$cloned = [];
-
-			for ($i = 1; $i <= $clones; $i++)
+			if (empty($this->backend))
 			{
-				// For all tags inside the block we will add an
-				// incrementing integer to the end of the tag name.
-				$cloned[] = preg_replace('/\${(.*?)}/','${$1_'.$i.'}', $clone);
+				throw new RuntimeException('Backend Class not created yet!');
 			}
-
-			if ($replace)
-			{
-				$this->documentXML = $this->xml(str_replace
-				(
-					$matches[0],
-					implode('', $cloned),
-					$this->documentXML->asXml()
-				));
-			}
-		}
-	}
-
-	/**
-	 * Method: replaceBlock
-	 * =========================================================================
-	 * Replaces a block. This can be used to perform very low level editing to
-	 * the document. The idea being that you will need to actually provide valid
-	 * DOCx XML as the replacement string.
-	 * 
-	 * > NOTE: Currently only works in the main body content.
-	 * > Will not work in headers and footers.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $blockname: The name of the block to replace.
-	 *  - $replacement: The XML to insert into the document.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
-	 */
-	public function replaceBlock($blockname, $replacement)
-	{
-		if ($this->tempDocument === false) $this->readTempDocument();
-
-		$matches = $this->searchForBlock($this->documentXML, $blockname);
-
-		if (isset($matches[1]))
-		{
-			$this->documentXML = $this->xml(str_replace
-			(
-				$matches[0],
-				$replacement,
-				$this->documentXML->asXml()
-			));
-		}
-	}
-
-	/**
-	 * Method: deleteBlock
-	 * =========================================================================
-	 * Delete a block of text.
-	 * 
-	 * > NOTE: Currently only works in the main body content.
-	 * > Will not work in headers and footers.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $blockname: The blockname to remove.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
-	 */
-	public function deleteBlock($blockname)
-	{
-		$this->replaceBlock($blockname, '');
-	}
-
-	/**
-	 * Method: cloneRow
-	 * =========================================================================
-	 * Clone a table row in a template document.
-	 * 
-	 * > NOTE: Currently only works in the main body content.
-	 * > Will not work in headers and footers.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $search:
-	 *  - $numberOfClones:
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * 
-	 */
-	public function cloneRow($search, $numberOfClones)
-	{
-		if ($this->tempDocument === false) $this->readTempDocument();
-
-		$search = $this->normaliseStartTag($search);
-
-		$xml = $this->documentXML->asXml();
-
-		if (($tagPos = strpos($xml, $search)) === false)
-		{
-			throw new RuntimeException
-			(
-				'Can not clone row, template variable not found '.
-				'or variable contains markup.'
-			);
-		}
-
-		$rowStart = $this->findRowStart($xml, $tagPos);
-		$rowEnd = $this->findRowEnd($xml, $tagPos);
-		$xmlRow = Str::slice($xml, $rowStart, $rowEnd);
-
-		// Check if there's a cell spanning multiple rows.
-		if (preg_match('#<w:vMerge w:val="restart"/>#', $xmlRow))
-		{
-			// $extraRowStart = $rowEnd;
-			$extraRowEnd = $rowEnd;
-
-			while (true)
-			{
-				$extraRowStart = $this->findRowStart($xml, $extraRowEnd + 1);
-				$extraRowEnd = $this->findRowEnd($xml, $extraRowEnd + 1);
-
-				// If extraRowEnd is lower then 7, there was no next row found.
-				if ($extraRowEnd < 7) break;
-
-				// If tmpXmlRow doesn't contain continue,
-				// this row is no longer part of the spanned row.
-				$tmpXmlRow = Str::slice($xml, $extraRowStart, $extraRowEnd);
-				if
-				(
-					!preg_match('#<w:vMerge/>#', $tmpXmlRow) &&
-					!preg_match('#<w:vMerge w:val="continue" />#', $tmpXmlRow)
-				){
-					break;
-				}
-
-				// This row was a spanned row,
-				// update $rowEnd and search for the next row.
-				$rowEnd = $extraRowEnd;
-			}
-
-			$xmlRow = Str::slice($xml, $rowStart, $rowEnd);
-		}
-
-		$result = Str::slice($xml, 0, $rowStart);
-
-		for ($i = 1; $i <= $numberOfClones; $i++)
-		{
-			$result .= preg_replace('/\$\{(.*?)\}/', '\${\\1_' . $i . '}', $xmlRow);
-		}
-
-		$result .= Str::slice($xml, $rowEnd);
-
-		$this->documentXML = $this->xml($result);
-	}
-
-	/**
-	 * Method: findRowStart
-	 * =========================================================================
-	 * Find the start position of the nearest table row before $offset.
-	 * Used by [Method: cloneRow](#)
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $xml: The xml string to work with. __STRING not SimpleXMLElement__
-	 *  - $offset: The offset
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * int
-	 * 
-	 * Throws:
-	 * -------------------------------------------------------------------------
-	 *  - RuntimeException: When start position not found.
-	 */
-	protected function findRowStart($xml, $offset)
-	{
-		$rowStart = strrpos($xml, '<w:tr ', ((strlen($xml)-$offset)*-1));
-
-		if (!$rowStart)
-		{
-			$rowStart = strrpos($xml, '<w:tr>', ((strlen($xml)-$offset)*-1));
-		}
-
-		if (!$rowStart)
-		{
-			throw new RuntimeException
-			(
-				"Can not find the start position of the row to clone."
-			);
-		}
-
-		return $rowStart;
-	}
-
-	/**
-	 * Method: findRowEnd
-	 * =========================================================================
-	 * Find the end position of the nearest table row after $offset
-	 * Used by [Method: cloneRow](#)
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $xml: The xml string to work with. __STRING not SimpleXMLElement__
-	 *  - $offset: The offset
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * int
-	 */
-	protected function findRowEnd($xml, $offset)
-	{
-		$rowEnd = strpos($xml, "</w:tr>", $offset) + 7;
-		return $rowEnd;
-	}
-
-	/**
-	 * Method: readTempDocument
-	 * =========================================================================
-	 * This method uses ```ZipArchive``` to open up the temp docx template file.
-	 * It populates the [Property: documentXML](#), [Property: headerXMLs](#)
-	 * & [Property: footerXMLs](#).
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 * n/a
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
-	 */
-	protected function readTempDocument()
-	{
-		// Create the temp document
-		// We don't want to make any changes to the original template file
-		$this->tempDocument = $this->tempFile();
-		$this->fileSystem->copy($this->template, $this->tempDocument, true);
-
-		// Open the temp document
-		if ($this->zip->open($this->tempDocument) !== true)
-		{
-			throw new RuntimeException
-			(
-				'Failed to open the temp template document!'
-			);
-		}
-
-		// Read in the headers
-		$index = 1;
-		while ($this->zip->locateName($this->getHeaderName($index)) !== false)
-		{
-			$this->headerXMLs[$index] = $this->xml
-			(
-				$this->zip->getFromName
-				(
-					$this->getHeaderName($index)
-				)
-			);
-
-			$index++;
-		}
-
-		// Read in the main body
-		$this->documentXML = $this->xml
-		(
-			$this->zip->getFromName('word/document.xml')
-		);
-
-		// Read in the footers
-		$index = 1;
-		while ($this->zip->locateName($this->getFooterName($index)) !== false)
-		{
-			$this->footerXMLs[$index] = $this->xml
-			(
-				$this->zip->getFromName
-				(
-					$this->getFooterName($index)
-				)
-			);
 			
-			$index++;
+			return call_user_func_array([$this->backend, $name], $args);
 		}
-	}
-
-	/**
-	 * Method: writeTempDocument
-	 * =========================================================================
-	 * After we have done any searching replacing, we need to write the
-	 * modified XML back into the temporary docx document.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 * n/a
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
-	 */
-	protected function writeTempDocument()
-	{
-		// Make sure we have a valid converter
-		// We perform this check here because we assume the results of
-		// this method call will be passed directly to the converter.
-		if (is_null($this->converter))
-		{
-			throw new RuntimeException('You must configure a converter!');
-		}
-		
-		// If some one is just doing a simple conversion we have no temp
-		// document to save, hence we just pass the original back to the caller.
-		if ($this->tempDocument === false)
-		{
-			return $this->template;
-		}
-		
-		// Write the headers
-		foreach ($this->headerXMLs as $index => $headerXML)
-		{
-			$this->zip->addFromString
-			(
-				$this->getHeaderName($index),
-				$this->headerXMLs[$index]->asXml()
-			);
-		}
-
-		// Write the main body
-		$xml = $this->documentXML->asXml();
-		$this->zip->addFromString('word/document.xml', $xml);
-
-		// Write the footers
-		foreach ($this->footerXMLs as $index => $headerXML)
-		{
-			$this->zip->addFromString
-			(
-				$this->getFooterName($index),
-				$this->footerXMLs[$index]->asXml()
-			);
-		}
-
-		// Close zip file
-		if ($this->zip->close() === false)
-		{
-			throw new RuntimeException
-			(
-				'Could not close the temp template document!'
-			);
-		}
-		
-		// Return the temp document
-		return $this->tempDocument;
-	}
-
-	/**
-	 * Method: deleteTempDocument
-	 * =========================================================================
-	 * Once we are finished with the temp document we need to delete it.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 * n/a
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
-	 */
-	protected function deleteTempDocument()
-	{
-		$this->fileSystem->remove($this->tempDocument);
-	}
-
-	/**
-	 * Method:getHeaderName
-	 * =========================================================================
-	 * Get the name of the header file for $index.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $index: The number of the header.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * string
-	 */
-	protected function getHeaderName($index)
-	{
-		return sprintf('word/header%d.xml', $index);
-	}
-
-	/**
-	 * Method:getFooterName
-	 * =========================================================================
-	 * Get the name of the footer file for $index.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $index: The number of the footer.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * string
-	 */
-	protected function getFooterName($index)
-	{
-		return sprintf('word/footer%d.xml', $index);
-	}
-
-	/**
-	 * Method: setValueForPart
-	 * =========================================================================
-	 * Find and replace placeholders in the given XML section.
-	 * 
-	 * > NOTE: This is not part of the public API.
-	 * 
-	 * Paramters:
-	 * -------------------------------------------------------------------------
-	 *  - $xml: The xml string that we are to act on.
-	 *  - $search: The tag to search for. ie: ${MYTAG}
-	 *  - $replace: A value to replace the tag with.
-	 *  - $limit: How many times to do the replacement.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * ```SimpleXMLElement```
-	 */
-	protected function setValueForPart($xml, $search, $replace, $limit)
-	{
-		// Make sure the search value contains the tag syntax
-		$search = $this->normaliseStartTag($search);
-
-		// Make sure the replacement value is encoded correctly.
-		$replace = htmlspecialchars(Str::toUTF8($replace));
-
-		// Do the search and replace
-		return $this->xml(preg_replace
-		(
-			'/'.preg_quote($search, '/').'/u',
-			$replace,
-			$xml->asXml(),
-			$limit
-		));
-	}
-
-	/**
-	 * Method: normaliseStartTag
-	 * =========================================================================
-	 * This ensures that the start tag contains the correct syntax.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $value: The tag name, with or without curleys.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * string
-	 */
-	protected function normaliseStartTag($value)
-	{
-		if (substr($value, 0, 2) !== '${' && substr($value, -1) !== '}')
-		{
-			$value = '${'.$value.'}';
-		}
-
-		return $value;
-	}
-
-	/**
-	 * Method: normaliseEndTag
-	 * =========================================================================
-	 * This ensures that the end tag contains the correct syntax.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $value: The tag name, with or without curleys.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * string
-	 */
-	protected function normaliseEndTag($value)
-	{
-		if (substr($value, 0, 2) !== '${/' && substr($value, -1) !== '}')
-		{
-			$value = '${/'.$value.'}';
-		}
-
-		return $value;
-	}
-
-	/**
-	 * Method: getStartAndEndNodes
-	 * =========================================================================
-	 * Searches the xml with the given blockname and returns
-	 * the corresponding start and end nodes.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $xml: An instance of ```SimpleXMLElement```
-	 *  - $blockname: The name of the block to find.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * array
-	 */
-	protected function getStartAndEndNodes($xml, $blockname)
-	{
-		// Assume the nodes don't exist
-		$startNode = false; $endNode = false;
-
-		// Search for the block start and end tags
-		foreach ($xml->xpath('//w:t') as $node)
-		{
-			if (Str::contains($node, $this->normaliseStartTag($blockname)))
-			{
-				$startNode = $node;
-				continue;
-			}
-
-			if (Str::contains($node, $this->normaliseEndTag($blockname)))
-			{
-				$endNode = $node;
-				break;
-			}
-		}
-
-		// Bail out if we couldn't find anything
-		if ($startNode === false || $endNode === false) return false;
-
-		// Find the parent <w:p> node for the start tag
-		$node = $startNode; $startNode = null;
-		while (is_null($startNode))
-		{
-			$node = $node->xpath('..')[0];
-
-			if ($node->getName() == 'p')
-			{
-				$startNode = $node;
-			}
-		}
-
-		// Find the parent <w:p> node for the end tag
-		$node = $endNode; $endNode = null;
-		while (is_null($endNode))
-		{
-			$node = $node->xpath('..')[0];
-
-			if ($node->getName() == 'p')
-			{
-				$endNode = $node;
-			}
-		}
-
-		// Return the start and end node
-		return [$startNode, $endNode];
-	}
-
-	/**
-	 * Method: getBlockRegx
-	 * =========================================================================
-	 * Builds the regular expression to get the
-	 * xml block between the start and end nodes.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $nodes: An array containing the start and end nodes.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * string
-	 */
-	protected function getBlockRegx($nodes)
-	{
-		$pattern = '/';
-		$pattern .= preg_quote($nodes[0]->asXml(), '/');
-		$pattern .= '(.*?)';
-		$pattern .= preg_quote($nodes[1]->asXml(), '/');
-		$pattern .= '/is';
-
-		return $pattern;
-	}
-
-	/**
-	 * Method: searchForBlock
-	 * =========================================================================
-	 * This will search for the xml block between the start and end tags.
-	 * 
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 *  - $xml: An instance of ```SimpleXMLElement```
-	 *  - $blockname: The name of the block.
-	 * 
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * array
-	 */
-	protected function searchForBlock($xml, $blockname)
-	{
-		// Find the starting and ending tags
-		$nodes = $this->getStartAndEndNodes($this->documentXML, $blockname);
-
-		// Bail out early
-		if ($nodes === false) return null;
-
-		// Find the xml in between the nodes
-		preg_match($this->getBlockRegx($nodes), $xml->asXml(), $matches);
-
-		return $matches;
 	}
 }

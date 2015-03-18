@@ -36,4 +36,11 @@ class RoboFile extends Robo\Tasks
 		$this->taskCleanDir('./tests/output')->run();
 		exit($this->taskPHPUnit()->arg('./tests')->run()->getExitCode());
 	}
+	
+	public function example()
+	{
+		$pdf = new Gears\Pdf('<!DOCTYPE html><html><head><title>TEST</title></head><body><p>Hello World!</p></body></html>');
+		
+		echo $pdf->generate();
+	}
 }
