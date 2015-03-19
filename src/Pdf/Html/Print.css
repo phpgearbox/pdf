@@ -1,0 +1,37 @@
+/*//////////////////////////////////////////////////////////////////////////////
+// __________ __             ________                   __________
+// \______   \  |__ ______  /  _____/  ____ _____ ______\______   \ _______  ___
+//  |     ___/  |  \\____ \/   \  ____/ __ \\__  \\_  __ \    |  _//  _ \  \/  /
+//  |    |   |   Y  \  |_> >    \_\  \  ___/ / __ \|  | \/    |   (  <_> >    <
+//  |____|   |___|  /   __/ \______  /\___  >____  /__|  |______  /\____/__/\_ \
+//                \/|__|           \/     \/     \/             \/            \/
+// -----------------------------------------------------------------------------
+//          Designed and Developed by Brad Jones <brad @="bjc.id.au" />
+// -----------------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////////////*/
+
+/**
+ * Ensure every explicity defined page container creates a new page.
+ */
+.page { page-break-before: always; }
+
+/**
+ * By default we tell phantomjs to use a margin of 0 so here in the css
+ * we have ultimate control of the entire page. However because margin-top
+ * and margin-bottom here has no effect we use padding instead.
+ *
+ * NOTE: @page also seems to fail.
+ *
+header{ padding-top: 10mm; }
+header, main, footer { padding-left: 10mm; padding-right: 10mm; }
+footer { padding-bottom: 10mm; }
+*/
+
+/**
+ * Sticky Footers
+ *
+ * It goes without saying that the footer of every page should be at the bottom
+ * regardless of the height of the content in the main container.
+ */
+.page { position: relative; }
+footer { position: absolute; bottom: 0; }
