@@ -99,8 +99,7 @@ class Backend extends Container implements BackendInterface
 		{
 			return
 			'
-				<style>'.file_get_contents(__DIR__.'/Normalize.css').'</style>
-				<style media="print">'.file_get_contents(__DIR__.'/Print.css').'</style>
+				<style>'.file_get_contents(__DIR__.'/Print.css').'</style>
 				<script>'.file_get_contents(__DIR__.'/jQuery.js').'</script>
 				<script>'.file_get_contents(__DIR__.'/Print.js').'</script>
 			';
@@ -160,11 +159,6 @@ class Backend extends Container implements BackendInterface
 		if (isset($this->paperSize['height']))
 		{
 			$cmd .= '--height "'.$this->paperSize['height'].'" ';
-		}
-
-		if (isset($this->paperSize['margin']))
-		{
-			$cmd .= '--margin '.$this->paperSize['margin'].'" ';
 		}
 
 		// Run the command

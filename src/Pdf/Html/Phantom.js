@@ -24,7 +24,6 @@ var args = readArgs
 ({
 	url: null,
 	output: null,
-	margin: '10mm',
 	width: '210mm',
 	height: '297mm'
 });
@@ -33,7 +32,10 @@ var args = readArgs
 var page = webpage.create();
 
 // Set the paper size
-page.paperSize = { width: args.width,height: args.height,margin: args.margin };
+page.paperSize = { width: args.width, height: args.height };
+
+// Normalise the paper size
+var normalisedPaperSize = normalisePageSize(args.width, args.height);
 
 // Open up the page
 page.open(args.url, function (status)
@@ -54,13 +56,15 @@ page.open(args.url, function (status)
 	// We pass through the paper size so that it knows how big the window is.
 	page.evaluate
 	(
-		function(width, height, margin)
+		function(width, height, version)
 		{
 			// NOTE: evaluate is syncronous, so long as beforePrint
 			// remains syncronous as well, we should be all good.
-			if (beforePrint) beforePrint(width, height, margin);
+			if (beforePrint) beforePrint(width, height, version);
 		},
-		args.width, args.height, args.margin
+		normalisedPaperSize.width,
+		normalisedPaperSize.height,
+		phantom.version.major
 	);
 
 	// Save the page to a PDF file
@@ -73,6 +77,46 @@ page.open(args.url, function (status)
 ////////////////////////////////////////////////////////////////////////////////
 // HELPER FUNCTIONS BELOW HERE
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Normalise and Convert the mm Dimensions of the Page into Pixels
+ *
+ * There are some major scaling diffrences between phantomjs 1.x and 2.x so
+ * we convert to pixels ourselves in an attempt to eliminate issues that arise
+ * from this. The results have been optimised to work with phantomjs 2.x
+ *
+ * @see https://github.com/ariya/phantomjs/issues/12936
+ *
+ * @param string width The width of the page, includes measurement type.
+ * @param string height The height of the page, includes measurement type.
+ * @return object The width and height in pixels of the page.
+ */
+function normalisePageSize(width, height)
+{
+	// Define the PPI value depending on the version of phantomjs.
+	if (phantom.version.major == 2)
+	{
+		var ppi = 72;
+	}
+	else
+	{
+		var ppi = 90;
+	}
+
+	// The dimensions provided contain the measurement type at the end.
+	// We strictly assume we are dealing with mm. Get with the times America :)
+	// So lets just strip that away with a simple parseInt call.
+	width = parseInt(width);
+	height = parseInt(height);
+
+	// Convert mm to pixels
+	var mm_to_inch = 25.4;
+	width = (width / mm_to_inch) * ppi;
+	height = (height / mm_to_inch) * ppi;
+
+	// Finally return an object with the nromalised sizes.
+	return { width: width, height: height };
+}
 
 /**
  * Simple Error/Exception Handler

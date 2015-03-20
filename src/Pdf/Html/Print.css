@@ -11,21 +11,51 @@
 //////////////////////////////////////////////////////////////////////////////*/
 
 /**
+ * In this custom phantomjs printing environment unexpected margins can be a
+ * real pain to track down and fix. Every time I ran into some sort of
+ * unexpected layout behaviour it was usally because of margin so we
+ * blindly reset everything.
+ */
+* { margin: 0; }
+
+/**
+ * Next another pain in my arse was collapsed margins.
+ * This will ensure they don't cause any trouble either.
+ *
+ * @see http://stackoverflow.com/questions/1762539
+ */
+* { overflow: auto; }
+
+/**
+ * So now lets add some spacing back to the main typographical elements.
+ */
+h1, h2, h3, h4, h5, h6, p, hr { margin-bottom: 10px; }
+
+/**
+ * Ensure all the main page parts or containers are blocks.
+ * This is crtical for accurate height measurement.
+ */
+header, main, footer, div { display:block; }
+
+/**
+ * Set a sensible default font.
+ *
+ * NOTE: You must use phantomjs 2.x to be able to use custom fonts.
+ */
+body { font-family: sans-serif; }
+
+/**
+ * We do not use the phantomjs margin paper size option.
+ * This allows ultimate control of the layout with CSS.
+ */
+header { margin-top: 20px; }
+header, main, footer { margin-left: 20px; margin-right: 20px; }
+footer { margin-bottom: 20px; }
+
+/**
  * Ensure every explicity defined page container creates a new page.
  */
 .page { page-break-before: always; }
-
-/**
- * By default we tell phantomjs to use a margin of 0 so here in the css
- * we have ultimate control of the entire page. However because margin-top
- * and margin-bottom here has no effect we use padding instead.
- *
- * NOTE: @page also seems to fail.
- *
-header{ padding-top: 10mm; }
-header, main, footer { padding-left: 10mm; padding-right: 10mm; }
-footer { padding-bottom: 10mm; }
-*/
 
 /**
  * Sticky Footers
@@ -35,3 +65,21 @@ footer { padding-bottom: 10mm; }
  */
 .page { position: relative; }
 footer { position: absolute; bottom: 0; }
+
+/**
+ * Debugging Backgrounds
+ *
+ * Theroticaqlly we should be able to just load the HTML Document into a webkit
+ * browser (ie: Chrome) and debug the layout of the page in a normal fashion
+ * using the inspector.
+ *
+ * However in practise this doesn't really work as there are diffrences between
+ * phantomjs and chrome. There are obviously diffrences between a screen view
+ * and a print view. Thus it is easier to enable these styles so we can actually
+ * see the size of various elements in the final PDF.
+ */
+
+/*.page { background-color: red; }
+header { background-color: green; }
+main { background-color: chartreuse; }
+footer { background-color: blue; }*/
