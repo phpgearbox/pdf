@@ -100,6 +100,7 @@ class Backend extends Container implements BackendInterface
 			return
 			'
 				<style>'.file_get_contents(__DIR__.'/Print.css').'</style>
+				<script>'.file_get_contents(__DIR__.'/isVisible.js').'</script>
 				<script>'.file_get_contents(__DIR__.'/jQuery.js').'</script>
 				<script>'.file_get_contents(__DIR__.'/Print.js').'</script>
 			';

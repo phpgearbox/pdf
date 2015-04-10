@@ -50,7 +50,7 @@ body { font-family: sans-serif; }
  */
 header { margin-top: 20px; }
 header, main, footer { margin-left: 20px; margin-right: 20px; }
-footer { margin-bottom: 20px; }
+footer { margin-top:20px; margin-bottom: 20px; }
 
 /**
  * Ensure every explicity defined page container creates a new page.
@@ -79,7 +79,9 @@ footer { position: absolute; bottom: 0; }
  * see the size of various elements in the final PDF.
  */
 
-/*.page { background-color: red; }
+.page { background-color: red; }
 header { background-color: green; }
 main { background-color: chartreuse; }
-footer { background-color: blue; }*/
+footer { background-color: blue; }
+.to-big-outer { background-color: aqua; }
+.to-big-inner { background-color: blueviolet; }
