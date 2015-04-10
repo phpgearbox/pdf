@@ -77,11 +77,11 @@ footer { position: absolute; bottom: 0; }
  * phantomjs and chrome. There are obviously diffrences between a screen view
  * and a print view. Thus it is easier to enable these styles so we can actually
  * see the size of various elements in the final PDF.
- */
+ *
 
 .page { background-color: red; }
 header { background-color: green; }
 main { background-color: chartreuse; }
 footer { background-color: blue; }
 .to-big-outer { background-color: aqua; }
-.to-big-inner { background-color: blueviolet; }
+.to-big-inner { background-color: blueviolet; } */

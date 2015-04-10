@@ -353,6 +353,9 @@ function createToc()
 		// Otherwise we might end up in a never ending loop
 		if ($(heading).parents('.page').find('ul.toc').length > 0) return true;
 
+		// Ignore all headings that have the class "toc-ignore"
+		if ($(heading).hasClass('toc-ignore')) return true;
+
 		// Grab the level of the heading
 		var level = $(heading).prop('tagName').replace('H', '');
 
