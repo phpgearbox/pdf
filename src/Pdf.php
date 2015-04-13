@@ -288,20 +288,34 @@ class Pdf extends Container
 		}
 	}
 
+	/**
+	 * Proxy Properties to Backend
+	 *
+	 * Once a source document has been supplied and a backend choosen.
+	 * This will then proxy any unresolved properties through to backend
+	 * class.
+	 *
+	 * The user can then perform further configuration and custmoistation to
+	 * the backend easily before calling one of the output methods above.
+	 *
+	 * @param string $name
+	 * @param mixed $value
+	 * @return void
+	 */
 	public function __set($name, $value)
 	{
 		if ($this->offsetExists($name))
 		{
-			return parent::__set($name, $value);
+			parent::__set($name, $value);
 		}
 		else
 		{
-			if (empty($this->backend))
+			// Due to the fact that the backend class is not intialised until
+			// after the main container is configured, we just fail siliently.
+			if (!empty($this->backend))
 			{
-				throw new RuntimeException('Backend Class not created yet!');
+				call_user_func([$this->backend, '__set'], $name, $value);
 			}
-
-			call_user_func([$this->backend, '__set'], $name, $value);
 		}
 	}
 }
