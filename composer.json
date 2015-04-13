@@ -13,11 +13,10 @@
 	},
 	"require":
 	{
-		"gears/string": "*",
 		"gears/di": "*",
+		"gears/string": "*",
 		"symfony/process": "2.*",
 		"symfony/filesystem": "2.*",
-		"google/apiclient": "1.*",
 		"jakoch/phantomjs-installer": "1.9.8"
 	},
 	"require-dev":
@@ -25,11 +24,16 @@
 		"codegyre/robo": "*",
 		"phpunit/phpunit": "4.*",
 		"guzzlehttp/guzzle": "4.*",
-		"sgh/pdfbox": "dev-master"
+		"sgh/pdfbox": "dev-master",
+		"google/apiclient": "1.*"
 	},
 	"scripts":
 	{
 		"post-install-cmd": ["PhantomInstaller\\Installer::installPhantomJS"],
 		"post-update-cmd": ["PhantomInstaller\\Installer::installPhantomJS"]
+	},
+	"suggest":
+	{
+		"google/apiclient": "Install to support the Google Docx Converter."
 	}
 }
