@@ -24,7 +24,7 @@ class Pdf extends Container
 	 * pointing to the document we will convert to PDF.
 	 */
 	protected $document;
-
+	
 	/**
 	 * This holds an instance of ```SplFileInfo```
 	 * pointing to the original untouched document.
@@ -34,30 +34,30 @@ class Pdf extends Container
 	 * NULL if a HTML string is provided.
 	 */
 	protected $originalDocument;
-
+	
 	/**
 	 * The type of source document we are to convert to PDF
 	 * Valid values for this are: ```docx```, ```html```
 	 */
 	private $documentType;
-
+	
 	/**
 	 * This class is simply just a Facade to create a fluent api for the end
 	 * user. This class doesn't do any of the actual converting. Based on the
 	 * document type it will proxy calls to the appropriate backend class.
 	 */
 	protected $backend;
-
+	
 	/**
 	 * A closure than returns a configured instance of ```SplFileInfo```.
 	 */
 	protected $injectFile;
-
+	
 	/**
 	 * A closure than returns an instance of ```Gears\Pdf\TempFile```.
 	 */
 	protected $injectTempFile;
-
+	
 	/**
 	 * Set Container Defaults
 	 *
@@ -71,17 +71,17 @@ class Pdf extends Container
 		{
 			return new SplFileInfo($filePath);
 		});
-
+		
 		$this->tempFile = $this->protect(function($contents, $ext)
 		{
 			$file = new TempFile('GearsPdf', $ext);
-
+			
 			$file->setContents($contents);
-
+			
 			return $file;
 		});
 	}
-
+	
 	/**
 	 * Performs some intial Setup.
 	 *
@@ -97,14 +97,14 @@ class Pdf extends Container
 	{
 		// Configure the container
 		parent::__construct($config);
-
+		
 		// Is the document a file
 		if (is_file($document))
 		{
 			// So that the save method can save the PDF in the same folder as
 			// the original source document we need a refrence to it.
 			$this->originalDocument = $this->file($document);
-
+			
 			// Grab the files extension
 			$ext = $this->originalDocument->getExtension();
 			if ($ext !== 'docx' && $ext !== 'html')
@@ -112,32 +112,32 @@ class Pdf extends Container
 				throw new RuntimeException('Must be a DOCX or HTML file.');
 			}
 			$this->documentType = $ext;
-
+			
 			// Save the document to a new temp file
 			// In the case of DOCX files we may make changes to the document
 			// before converting to PDF so to keep the API consitent lets create
 			// a the temp file now.
 			$this->document = $this->tempFile(file_get_contents($document), $ext);
 		}
-
+		
 		// Check for a HTML string
 		elseif (Str::contains($document, 'DOCTYPE'))
 		{
 			// Again lets save a temp file
 			$this->document = $this->tempFile($document, 'html');
-
+			
 			$this->documentType = 'html';
 		}
 		else
 		{
 			throw new RuntimeException('Unrecognised document type!');
 		}
-
+		
 		// Now create a new backend
 		$class = '\\Gears\\Pdf\\'.ucfirst($this->documentType).'\\Backend';
 		$this->backend = new $class($this->document, $config);
 	}
-
+	
 	/**
 	 * Shortcut Converter
 	 *
@@ -159,15 +159,15 @@ class Pdf extends Container
 	public static function convert($document, $pdf = null, $config = [])
 	{
 		$instance = new static($document, $config);
-
-		if (!is_file($document))
+		
+		if (empty($pdf))
 		{
 			return $instance->backend->generate();
 		}
-
+		
 		return $instance->save($pdf);
 	}
-
+	
 	/**
 	 * Saves the generated PDF.
 	 *
@@ -182,7 +182,7 @@ class Pdf extends Container
 	public function save($path = null)
 	{
 		$pdf = $this->backend->generate();
-
+		
 		// If no output path has been supplied save the file
 		// in the same folder as the original template.
 		if (is_null($path))
@@ -196,22 +196,22 @@ class Pdf extends Container
 					'You must supply a path for us to save the PDF!'
 				);
 			}
-
+			
 			$ext = $this->originalDocument->getExtension();
 			$path = Str::s($this->originalDocument->getPathname());
 			$path = $path->replace('.'.$ext, '.pdf');
 		}
-
+		
 		// Save the pdf to the output path
 		if (@file_put_contents($path, $pdf) === false)
 		{
 			throw new RuntimeException('Failed to write to file "'.$path.'".');
 		}
-
+		
 		// Return the location of the saved pdf
 		return $this->file($path);
 	}
-
+	
 	/**
 	 * Http Download
 	 *
@@ -235,7 +235,7 @@ class Pdf extends Container
 		echo $this->backend->generate();
 		if ($exit) exit;
 	}
-
+	
 	/**
 	 * Http Stream
 	 *
@@ -256,7 +256,7 @@ class Pdf extends Container
 		echo $this->backend->generate();
 		if ($exit) exit;
 	}
-
+	
 	/**
 	 * Proxy Calls to Backend
 	 *
@@ -283,11 +283,11 @@ class Pdf extends Container
 			{
 				throw new RuntimeException('Backend Class not created yet!');
 			}
-
+			
 			return call_user_func_array([$this->backend, $name], $args);
 		}
 	}
-
+	
 	/**
 	 * Proxy Properties to Backend
 	 *

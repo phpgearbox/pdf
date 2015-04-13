@@ -25,7 +25,8 @@
 		"phpunit/phpunit": "4.*",
 		"guzzlehttp/guzzle": "4.*",
 		"sgh/pdfbox": "dev-master",
-		"google/apiclient": "1.*"
+		"google/apiclient": "1.*",
+		"symfony/finder": "2.*"
 	},
 	"scripts":
 	{

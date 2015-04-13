@@ -93,8 +93,8 @@ class Unoconv extends Container implements DocxConverter
 		{
 			throw new RuntimeException
 			(
-				'The unoconv command was not found or is not executable! '.
-				'This class uses unoconv to create the PDFs.'
+				'The unoconv command ("'.$this->binary.'") '.
+				'was not found or is not executable by the current user! '
 			);
 		}
 

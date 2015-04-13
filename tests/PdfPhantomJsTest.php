@@ -11,29 +11,33 @@
 // -----------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 
-class RoboFile extends Robo\Tasks
+use Gears\String as Str;
+use SGH\PdfBox\PdfBox;
+
+class PdfPhantomJsTest extends PHPUnit_Framework_TestCase
 {
-	/**
-	 * Method: test
-	 * =========================================================================
-	 * This will run our unit / acceptance testing. All the *gears* within
-	 * the **PhpGearBox** utlise PhpUnit as the basis for our testing with the
-	 * addition of the built in PHP Web Server, making the acceptance tests
-	 * almost as portable as standard unit tests.
-	 *
-	 * Just run: ```php ./vendor/bin/robo test```
-	 *
-	 * Parameters:
-	 * -------------------------------------------------------------------------
-	 * n/a
-	 *
-	 * Returns:
-	 * -------------------------------------------------------------------------
-	 * void
-	 */
-	public function test()
+	protected $pdfBox;
+	
+	protected function setUp()
 	{
-		$this->taskCleanDir('./tests/output')->run();
-		exit($this->taskPHPUnit()->arg('./tests')->run()->getExitCode());
+		$this->pdfBox = new PdfBox;
+		$this->pdfBox->setPathToPdfBox('./tests/pdfbox-app-1.8.7.jar');
+	}
+	
+	public function testConvert()
+	{
+		$html = file_get_contents('./tests/templates/PhantomJs.html');
+		
+		$result = Gears\Pdf::convert($html, './tests/output/PhantomJsConvert.pdf');
+		
+		$this->assertInstanceOf('SplFileInfo', $result);
+		
+		$this->assertFileExists('./tests/output/PhantomJsConvert.pdf');
+		
+		$text = Str::s($this->pdfBox->textFromPdfFile('./tests/output/PhantomJsConvert.pdf'))->to('ascii');
+		
+		$this->assertTrue($text->contains('Iamthecoverpage.'));
+		
+		$this->assertTrue($text->contains('B15/15'));
 	}
 }
