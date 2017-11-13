@@ -13,8 +13,9 @@
 	},
 	"require":
 	{
+		"php": "^7.0",
 		"gears/di": "*",
-		"gears/string": "^0.6.0",
+		"gears/string": "^1.0",
 		"symfony/process": "2.*|3.*",
 		"symfony/filesystem": "2.*|3.*",
 		"jakoch/phantomjs-installer": "1.9.8"
