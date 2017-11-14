@@ -13,7 +13,6 @@
 
 use SplFileInfo;
 use RuntimeException;
-//use Gears\String\Str;
 use Gears\Di\Container;
 use Gears\Pdf\TempFile;
 
@@ -121,8 +120,7 @@ class Pdf extends Container
 		}
 		
 		// Check for a HTML string
-//		elseif (Str::contains($document, 'DOCTYPE'))
-        elseif (mb_strpos($document, 'DOCTYPE') !== false)
+		elseif (mb_strpos($document, 'DOCTYPE') !== false)
         {
 			// Again lets save a temp file
 			$this->document = $this->tempFile($document, 'html');
@@ -199,8 +197,6 @@ class Pdf extends Container
 			}
 			
 			$ext = $this->originalDocument->getExtension();
-//			$path = Str::s($this->originalDocument->getPathname());
-//			$path = $path->replace('.'.$ext, '.pdf');
             $path = str_replace('.'.$ext, '.pdf', $this->originalDocument->getPathname());
 		}
 		
