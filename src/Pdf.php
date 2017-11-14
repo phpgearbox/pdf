@@ -121,7 +121,7 @@ class Pdf extends Container
 		
 		// Check for a HTML string
 		elseif (mb_strpos($document, 'DOCTYPE') !== false)
-        {
+		{
 			// Again lets save a temp file
 			$this->document = $this->tempFile($document, 'html');
 			
