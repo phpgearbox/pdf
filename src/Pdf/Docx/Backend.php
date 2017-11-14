@@ -584,7 +584,7 @@ class Backend extends Container implements BackendInterface
 		$search = $this->normaliseStartTag($search);
 
 		// Make sure the replacement value is encoded correctly.
-		$replace = htmlspecialchars(Str::toUTF8($replace));
+		$replace = htmlspecialchars(mb_convert_encoding($replace, 'UTF-8'));
 
 		// Do the search and replace
 		return $this->xml(preg_replace
