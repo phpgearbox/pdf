@@ -13,7 +13,7 @@
 
 use RuntimeException;
 use Gears\Di\Container;
-use Gears\String\Str;
+//use Gears\String\Str;
 use Gears\Pdf\TempFile;
 use Symfony\Component\Process\Process;
 use Gears\Pdf\Contracts\DocxConverter;
@@ -132,8 +132,9 @@ class Unoconv extends Container implements DocxConverter
 			// NOTE: For some really odd reason the first time the command runs
 			// it does not complete successfully. The second time around it
 			// works fine. It has something to do with the homedir setup...
-			if (Str::contains($error, 'Error: Unable to connect'))
-			{
+//			if (Str::contains($error, 'Error: Unable to connect'))
+            if (mb_strpos($error, 'Error: Unable to connect') !== false)
+            {
 				$process->run();
 
 				if (!$process->isSuccessful())
