@@ -197,7 +197,7 @@ class Pdf extends Container
 			}
 			
 			$ext = $this->originalDocument->getExtension();
-            $path = str_replace('.'.$ext, '.pdf', $this->originalDocument->getPathname());
+			$path = str_replace('.'.$ext, '.pdf', $this->originalDocument->getPathname());
 		}
 		
 		// Save the pdf to the output path
