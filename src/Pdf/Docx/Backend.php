@@ -13,7 +13,7 @@
 
 use ZipArchive;
 use RuntimeException;
-use Gears\String as Str;
+use Gears\String\Str;
 use Gears\Di\Container;
 use Gears\Pdf\TempFile;
 use Gears\Pdf\Docx\SimpleXMLElement;
@@ -23,7 +23,7 @@ use Gears\Pdf\Contracts\Backend as BackendInterface;
 class Backend extends Container implements BackendInterface
 {
 	/**
-	 * @var Gears\Pdf\TempFile DOCX document to use as the template for our PDF.
+	 * @var TempFile DOCX document to use as the template for our PDF.
 	 *                         Set as the first argument of the constructor of
 	 *                         this class.
 	 */
