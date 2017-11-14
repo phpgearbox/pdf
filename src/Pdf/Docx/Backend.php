@@ -665,13 +665,15 @@ class Backend extends Container implements BackendInterface
 		// Search for the block start and end tags
 		foreach ($xml->xpath('//w:t') as $node)
 		{
-			if (Str::contains($node, $this->normaliseStartTag($blockname)))
+
+
+			if (mb_strpos($node, $this->normaliseStartTag($blockname)) !== false)
 			{
 				$startNode = $node;
 				continue;
 			}
 
-			if (Str::contains($node, $this->normaliseEndTag($blockname)))
+			if (mb_strpos($node, $this->normaliseEndTag($blockname)) !== false)
 			{
 				$endNode = $node;
 				break;

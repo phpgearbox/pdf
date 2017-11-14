@@ -133,11 +133,7 @@ class Backend extends Container implements BackendInterface
 		{
 			$this->document->setContents
 			(
-				Str::s($this->document->getContents())->replace
-				(
-					'</head>',
-					$this->printFramework.'</head>'
-				)
+				str_replace('</head>', $this->printFramework.'</head>', $this->document->getContents())
 			);
 		}
 
