@@ -1,5 +1,5 @@
 {
-	"name": "gears/pdf",
+	"name": "dennobaby/pdf",
 	"description": "A PDF builder using HTML or DOCX templates.",
 	"homepage": "https://github.com/phpgearbox/pdf",
 	"keywords": ["pdf", "docx", "template", "builder", "converter"],
