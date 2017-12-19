@@ -11,9 +11,9 @@
 // -----------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 
+use Gears\String\Str;
 use ZipArchive;
 use RuntimeException;
-use Gears\String as Str;
 use Gears\Di\Container;
 use Gears\Pdf\TempFile;
 use Gears\Pdf\Docx\SimpleXMLElement;
@@ -584,8 +584,9 @@ class Backend extends Container implements BackendInterface
 		$search = $this->normaliseStartTag($search);
 
 		// Make sure the replacement value is encoded correctly.
-		$replace = htmlspecialchars(Str::toUTF8($replace));
+//		$replace = htmlspecialchars(Str::toUTF8($replace));
 
+        $replace = htmlspecialchars($replace);
 		// Do the search and replace
 		return $this->xml(preg_replace
 		(
