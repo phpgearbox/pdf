@@ -11,9 +11,9 @@
 // -----------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 
+use Gears\String\Str;
 use ZipArchive;
 use RuntimeException;
-use Gears\String as Str;
 use Gears\Di\Container;
 use Gears\Pdf\TempFile;
 use Gears\Pdf\Docx\SimpleXMLElement;

@@ -14,7 +14,7 @@
 	"require":
 	{
 		"gears/di": "*",
-		"gears/string": "^0.6.0",
+		"gears/string": "v1.1.1",
 		"symfony/process": "2.*",
 		"symfony/filesystem": "2.*",
 		"jakoch/phantomjs-installer": "1.9.8"
