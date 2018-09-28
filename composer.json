@@ -14,19 +14,19 @@
 	"require":
 	{
 		"gears/di": "*",
-		"gears/string": "^0.6.0",
-		"symfony/process": "2.*",
-		"symfony/filesystem": "2.*",
+		"gears/string": "0.6.0",
+		"symfony/process": "3.*",
+		"symfony/filesystem": "3.*",
 		"jakoch/phantomjs-installer": "1.9.8"
 	},
 	"require-dev":
 	{
 		"codegyre/robo": "*",
-		"phpunit/phpunit": "4.*",
-		"guzzlehttp/guzzle": "4.*",
+		"phpunit/phpunit": "~6.*",
+		"guzzlehttp/guzzle": "~6.*",
 		"sgh/pdfbox": "dev-master",
 		"google/apiclient": "1.*",
-		"symfony/finder": "2.*"
+		"symfony/finder": ">=2.*"
 	},
 	"scripts":
 	{
