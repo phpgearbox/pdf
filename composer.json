@@ -15,8 +15,8 @@
 	{
 		"gears/di": "*",
 		"gears/string": "^0.6.0",
-		"symfony/process": "2.*",
-		"symfony/filesystem": "2.*",
+		"symfony/process": "2.*|3.*",
+		"symfony/filesystem": "2.*|3.*",
 		"jakoch/phantomjs-installer": "1.9.8"
 	},
 	"require-dev":
@@ -25,8 +25,8 @@
 		"phpunit/phpunit": "4.*",
 		"guzzlehttp/guzzle": "4.*",
 		"sgh/pdfbox": "dev-master",
-		"google/apiclient": "1.*",
-		"symfony/finder": "2.*"
+		"google/apiclient": "1.*|2.*",
+		"symfony/finder": "2.*|3.*"
 	},
 	"scripts":
 	{
