@@ -1,3 +1,7 @@
+> Looking for maintainers, I no longer do much if any PHP dev, I have moved on, mostly work in dotnet core, node.js & golang these days. If anyone is keen to take over these projects, get in touch - brad@bjc.id.au
+
+_PS. I know this is one of the more popular repos and I know some of you have been having a few issues with it. I use [athenapdf](https://www.athenapdf.com/) for all my PDF generation needs these days._
+
 The Pdf Gear
 ================================================================================
 [![Build Status](https://travis-ci.org/phpgearbox/pdf.svg)](https://travis-ci.org/phpgearbox/pdf)
