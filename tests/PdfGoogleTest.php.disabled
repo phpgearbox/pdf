@@ -11,7 +11,7 @@
 // -----------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 
-use Gears\String as Str;
+use Gears\String\Str;
 use SGH\PdfBox\PdfBox;
 
 class PdfGoogleTest extends PHPUnit_Framework_TestCase

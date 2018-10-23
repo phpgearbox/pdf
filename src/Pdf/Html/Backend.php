@@ -13,7 +13,7 @@
 
 use RuntimeException;
 use Gears\Di\Container;
-use Gears\String as Str;
+use Gears\String\Str;
 use Gears\Pdf\TempFile;
 use Symfony\Component\Process\Process;
 use Gears\Pdf\Contracts\Backend as BackendInterface;
@@ -21,7 +21,7 @@ use Gears\Pdf\Contracts\Backend as BackendInterface;
 class Backend extends Container implements BackendInterface
 {
 	/**
-	 * @var Gears\Pdf\TempFile The document we will convert to PDF.
+	 * @var TempFile The document we will convert to PDF.
 	 */
 	protected $document;
 
@@ -42,7 +42,7 @@ class Backend extends Container implements BackendInterface
 	protected $injectRunner;
 
 	/**
-	 * @var Symfony\Component\Process\Process
+	 * @var Process
 	 */
 	protected $injectProcess;
 
@@ -133,11 +133,7 @@ class Backend extends Container implements BackendInterface
 		{
 			$this->document->setContents
 			(
-				Str::s($this->document->getContents())->replace
-				(
-					'</head>',
-					$this->printFramework.'</head>'
-				)
+				str_replace('</head>', $this->printFramework.'</head>', $this->document->getContents())
 			);
 		}
 
