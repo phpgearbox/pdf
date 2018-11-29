@@ -165,6 +165,48 @@ class Backend extends Container implements BackendInterface
 			);
 		}
 	}
+	
+	/**
+	 * Method: getAllTags
+	 * =========================================================================
+	 * Find all placeholders and return array.
+	 * 
+	 * Paramters:
+	 * -------------------------------------------------------------------------
+	 *  none
+	 *
+	 * Returns:
+	 * -------------------------------------------------------------------------
+	 * ```Array```
+	 */
+	public function getAllTags()
+	{
+
+		$tags = array();
+
+		$regex = '/\$\{([^}]+)\}/u';
+
+		foreach ($this->headerXMLs as $index => $headerXML)
+		{
+			if (preg_match_all($regex, $headerXML->asXml(), $matches)) {
+				$tags = array_merge($tags, $matches[1]);
+			}
+		}
+
+		if (preg_match_all($regex, $this->documentXML->asXml(), $matches)) {
+			$tags = array_merge($tags, $matches[1]);
+		}
+
+
+		foreach ($this->footerXMLs as $index => $footerXML)
+		{
+			if (preg_match_all($regex, $footerXML->asXml(), $matches)) {
+				$tags = array_merge($tags, $matches[1]);
+			}
+		}
+
+		return $tags;
+	}
 
 	/**
 	 * Method: cloneBlock
