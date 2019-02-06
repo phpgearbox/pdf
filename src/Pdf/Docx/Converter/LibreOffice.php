@@ -70,7 +70,7 @@ class LibreOffice extends Container implements DocxConverter
 	 */
 	protected function setDefaults()
 	{
-		$this->binary = '/usr/bin/libreoffice';
+		$this->binary = defined('PHPWORD_LIBREOFFICE_BINARY') ? PHPWORD_LIBREOFFICE_BINARY : '/usr/bin/libreoffice';
 
 		$this->profile = '/tmp/gears-pdf-libreoffice';
 
